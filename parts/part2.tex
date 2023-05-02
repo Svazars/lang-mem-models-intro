@@ -1,0 +1,440 @@
+
+\section{Процессор хотел как лучше, а получилось...}
+\showTOC
+
+\begin{frame}{Кругом враги}
+
+Не только компиляторы (software) пытаются сломать ваше представление об исполнении программы в многопоточном контексте. 
+
+\pause
+Есть еще процессор и подсистема памяти (hardware). 
+
+\pause
+Которые умеют:
+\begin{itemize}
+    \item Исполнять независимые инструкции одновременно (out-of-order execution)
+    \item Задействовать одни и те же ресурсы для исполнения логически независимых потоков (hyper-threading)
+    \item Спекулировать\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)}}\textsuperscript{,}\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/Meltdown_(security_vulnerability)}}
+    \begin{itemize}
+        \item О предстоящих переходах (branch prediction)
+        \item О требуемой памяти (cache prefetching)
+        \item О результате вычислений (speculative execution)
+        \item И многом другом
+    \end{itemize}
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[fragile,t]{x86: Store buffering}
+
+\begin{adjustbox}{width=\textwidth,height=2cm,keepaspectratio}
+\begin{lstlisting}
+              int x, y, a, b;
+void thread1() {      |    void thread2() {                                   
+  x = 1;              |      y = 1;                           
+  a = y;              |      b = x;                           
+}                     |    }                    
+\end{lstlisting}
+\end{adjustbox}
+
+\pause
+
+\begin{adjustbox}{width=\textwidth,height=2cm,keepaspectratio}
+\begin{lstlisting}
+                x = 0  ;  y = 0
+thread A               |    thread B          
+  (A.1) MOV [x] ,  1   |      (B.1) MOV [y] , 1  
+  (A.2) MOV EAX , [y]  |      (B.2) MOV EBX, [x] 
+\end{lstlisting}
+\end{adjustbox}
+\end{frame}
+
+
+\begin{frame}[fragile,t,noframenumbering]{x86: Store buffering}
+
+\begin{adjustbox}{width=\textwidth,height=2cm,keepaspectratio}
+\begin{lstlisting}
+                x = 0  ;  y = 0
+thread A               |    thread B          
+  (A.1) MOV [x] ,  1   |      (B.1) MOV [y] , 1  
+  (A.2) MOV EAX , [y]  |      (B.2) MOV EBX, [x] 
+\end{lstlisting}
+\end{adjustbox}
+
+\pause
+Какие значения для \texttt{(EAX EBX)} допустимы?
+
+\texttt{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (1 1)\ , (0 1)\ , (1 0)\ , (0 0)}
+
+\pause
+Варианты исполнения:
+\begin{itemize}
+    \item \texttt{A.1 -> A.2 -> B.1 -> B.2}
+    \item \texttt{\ \ \ \ \ \ \       B.1 -> A.2 -> B.2}
+    \item \texttt{\ \ \ \ \ \ \ \ \ \ \ \ \ \              B.2 -> A.2}
+    \item \texttt{B.1 -> A.1 -> A.2 -> B.2}
+    \item \texttt{\ \ \ \ \ \ \ \ \ \ \ \ \ \              B.2 -> A.2}
+    \item \texttt{\ \ \ \ \ \ \       B.2 -> A.1 -> A.2}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile,t,noframenumbering]{x86: Store buffering}
+
+\begin{adjustbox}{width=\textwidth,height=2cm,keepaspectratio}
+\begin{lstlisting}
+                x = 0  ;  y = 0
+thread A               |    thread B          
+  (A.1) MOV [x] ,  1   |      (B.1) MOV [y] , 1  
+  (A.2) MOV EAX , [y]  |      (B.2) MOV EBX, [x] 
+\end{lstlisting}
+\end{adjustbox}
+
+Какие значения для \texttt{(EAX EBX)} допустимы?
+
+\texttt{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (1 1)\ , (0 1)\ , (1 0)\ , (0 0)}
+
+Варианты исполнения:
+\begin{itemize}
+    \item \texttt{A.1 -> A.2 -> B.1 -> B.2}                            : \texttt{(0, 1)}
+    \item \texttt{\ \ \ \ \ \ \       B.1 -> A.2 -> B.2}               : \texttt{(1, 1)}
+    \item \texttt{\ \ \ \ \ \ \ \ \ \ \ \ \ \              B.2 -> A.2} : \texttt{(1, 1)}
+    \item \texttt{B.1 -> A.1 -> A.2 -> B.2}                            : \texttt{(1, 1)}
+    \item \texttt{\ \ \ \ \ \ \ \ \ \ \ \ \ \              B.2 -> A.2} : \texttt{(1, 1)}
+    \item \texttt{\ \ \ \ \ \ \       B.2 -> A.1 -> A.2}               : \texttt{(1, 0)}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile,t,noframenumbering]{x86: Store buffering}
+
+\begin{adjustbox}{width=\textwidth,height=2cm,keepaspectratio}
+\begin{lstlisting}
+                x = 0  ;  y = 0
+thread A               |    thread B          
+  (A.1) MOV [x] ,  1   |      (B.1) MOV [y] , 1  
+  (A.2) MOV EAX , [y]  |      (B.2) MOV EBX, [x] 
+\end{lstlisting}
+\end{adjustbox}
+
+Какие значения для \texttt{(EAX EBX)} допустимы?
+
+\texttt{Ответ:\ \ \ \ \ \ \ \ \ \ \ \ (1 1)\ , (0 1)\ , (1 0)}
+
+Варианты исполнения:
+\begin{itemize}
+    \item \texttt{A.1 -> A.2 -> B.1 -> B.2}                            : \texttt{(0, 1)}
+    \item \texttt{\ \ \ \ \ \ \       B.1 -> A.2 -> B.2}               : \texttt{(1, 1)}
+    \item \texttt{\ \ \ \ \ \ \ \ \ \ \ \ \ \              B.2 -> A.2} : \texttt{(1, 1)}
+    \item \texttt{B.1 -> A.1 -> A.2 -> B.2}                            : \texttt{(1, 1)}
+    \item \texttt{\ \ \ \ \ \ \ \ \ \ \ \ \ \              B.2 -> A.2} : \texttt{(1, 1)}
+    \item \texttt{\ \ \ \ \ \ \       B.2 -> A.1 -> A.2}               : \texttt{(1, 0)}
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile,t,noframenumbering]{x86: Store buffering}
+
+\begin{adjustbox}{width=\textwidth,height=2cm,keepaspectratio}
+\begin{lstlisting}
+                x = 0  ;  y = 0
+thread A               |    thread B          
+  (A.1) MOV [x] ,  1   |      (B.1) MOV [y] , 1  
+  (A.2) MOV EAX , [y]  |      (B.2) MOV EBX, [x] 
+\end{lstlisting}
+\end{adjustbox}
+
+Какие значения для \texttt{(EAX EBX)} допустимы?
+
+\only<1>{\texttt{Ответ:}}\only<2->{\texttt{Правильный ответ:}} \only<1>{\texttt{\ \ \ \ \ \ \ \ \ \ \ }} \texttt{(1 1)\ , (0 1)\ , (1 0)}
+\pause
+\texttt{, (0 0)}
+
+\pause
+Процессор может переупорядочить записи и чтения, если это не нарушает intra-thread order.
+\pause
+В данном случае изменился наблюдаемый другими процессорами порядок store и load операций\footnote<4->{\tiny\url{https://habr.com/ru/company/JetBrains-education/blog/523298/}}\textsuperscript{,}\footnote<4->{\tiny\url{https://diy.inria.fr/doc/SB.litmus}}\textsuperscript{,}\footnote<4->{\tiny\url{https://www.cl.cam.ac.uk/~pes20/weakmemory/cacm.pdf}}.
+
+\pause
+Вывод: порядок инструкций в машинном коде $\neq$ порядок наблюдаемых эффектов этих инструкций.
+
+\end{frame}
+
+
+\begin{frame}[fragile]{arm64: Independent Reads of Independent Writes}
+
+\begin{adjustbox}{width=0.9\textwidth,height=1.5cm,keepaspectratio}
+\begin{lstlisting}
+                  x = 0  ;  y = 0
+thread 1   |  thread 2   |   thread 3   |   thread 4
+  x = 1    |    y = 1    |    r1 = x    |     r3 = y
+           |             |    r2 = y    |     r4 = x
+\end{lstlisting}
+\end{adjustbox}
+
+\pause
+Может ли быть так, что \texttt{(r1 = 1, r2 = 0, r3 = 1, r4 = 0)}?
+
+\pause
+Могут ли потоки 3 и 4 увидеть изменения в разном порядке?
+
+\pause
+При условии, что переупорядочивание чтений не происходит.
+
+\pause
+\begin{itemize}
+\item На \texttt{x86} или \texttt{x86\_64} (TSO): нет
+
+\pause
+\item На \texttt{ARM} или \texttt{POWER}: да\footnote<6->{\tiny A Tutorial Introduction to the ARM and POWER Relaxed Memory Models, section 6.1}
+\end{itemize}
+
+\pause
+Записи могут "доехать"\ до других процессоров в разном порядке.
+
+\pause
+У каждого процессора своя временная шкала и некоторое видение окружающего мира. Возможно, отличающееся от других процессоров.
+
+\pause
+Вывод: нельзя рассматривать "запись в ячейку памяти"\ как точку на единой временной шкале\footnote<9->{\tiny The Art of Multiprocessor Programming by Maurice Herlihy \& Nir Shavit, Chapter 3 "Concurrent Objects"}.
+\end{frame}
+
+
+\begin{frame}{Домашнее задание}
+
+Постойте, постойте!
+
+\pause
+На предыдущих слайдах говорится, что ячейки памяти пишутся и читаются разными процессорами без каких-либо разумных гарантий на порядок.
+
+\pause
+А на курсе по архитектуре компьютера нам рассказывали, что есть специальные алгоритмы когерентности кэшей\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/Cache_coherence}}\textsuperscript{,}\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/MESI_protocol}}, которые не допускают рассинхронизации памяти.
+
+\pause
+Кто-то из уважаемых преподавателей что-то недоговаривает.
+
+\pause
+И человек около проектора пришел всего на одну лекцию, а потом исчезнет.
+
+\pause
+Поразмыслите, как так выходит, что когерентность кэшей есть, а единого порядка видимых эффектов над различными ячейками памяти нет.
+\end{frame}
+
+
+\begin{frame}{Почему так сложно?}
+
+\begin{itemize}
+ \item порядок инструкций в машинном коде $\neq$ порядок наблюдаемых эффектов этих инструкций
+ \item нельзя рассматривать "чтение/запись в ячейку памяти"\ как точку на единой временной шкале
+ \item у каждого процессора свои правила
+\end{itemize}
+
+\pause
+Почему вообще хоть кто-то пользуется ARM/POWER/RISC-V и другими процессорами со слабой моделью памяти?
+
+\pause
+\begin{itemize}
+  \item производительность
+  \pause
+  \item Производительность!
+  \pause
+  \item энергосбережение :)
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}{Как теперь жить?}
+\framesubtitle{Memory barriers}
+
+\pause
+ Пользоваться специальными инструкциями, которые позволяют установить порядок среди операций чтения и записи\footnote<2->{\tiny\url{https://en.wikipedia.org/wiki/Memory_barrier}}.
+
+\pause
+
+Не забывайте
+\begin{itemize}
+  \item Барьеры дорогие
+  \item Инструкции обладают процессорно-специфичной и иногда весьма запутанной семантикой
+  \item Расстановка барьеров в ряде многопоточных алгоритмов -- не единственная и, по сути, является смесью искусства и инженерного мастерства
+  \item Практически все, кто так делает, похожи на глотателей огня. Даже если живы, то со шрамами от ожогов\footnote<3->{\tiny\url{https://www.researchgate.net/publication/228824849_Memory_Barriers_a_Hardware_View_for_Software_Hackers}}.
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[t]{Как теперь жить?}
+\framesubtitle{Языковые средства}
+
+Краткая выжимка из предыдущих слайдов. Для "починки"\ многопоточных алгоритмов бывает необходимо:
+\begin{itemize}
+  \item запрещать компилятору "фантазировать"
+  \item запрещать процессору "чудить"
+\end{itemize}
+
+\pause
+В общем случае, это независимые вещи. 
+
+\pause
+Однако, кажется логичным, чтобы компилятор уважал процессорные барьеры.
+
+\pause
+А наоборот?
+\end{frame}
+
+\begin{frame}[t]{Языковые средства}
+\framesubtitle{Два мира}
+
+Краткая выжимка из предыдущих слайдов. Для "починки"\ многопоточных алгоритмов бывает необходимо:
+\begin{itemize}
+  \item запрещать компилятору "фантазировать"
+  \item запрещать процессору "чудить"
+\end{itemize}
+
+Нужен ли программисту независимый контроль над обеими проблемами, с учетом того, что допустить ошибку невероятно легко, а негативные последствия практически невозможно отладить?
+
+\pause
+Существуют разные подходы:
+\begin{itemize}
+  
+  \pause
+  \item Языки, с маниакальной страстью пытающиеся дать разработчикам способы написать очень быструю, но некорректную программу.
+  \pause
+  C/C++
+
+  \pause
+  \item Языки, сфокусированные на безопасности и с помощью управляемой среды создающие "песочницу".
+  \pause
+  Java
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[t,noframenumbering]{Языковые средства}
+\framesubtitle{Два мира}
+
+Краткая выжимка из предыдущих слайдов. Для "починки"\ многопоточных алгоритмов бывает необходимо:
+\begin{itemize}
+  \item запрещать компилятору "фантазировать"
+  \item запрещать процессору "чудить"
+\end{itemize}
+
+Нужен ли программисту независимый контроль над обеими проблемами, с учетом того, что допустить ошибку невероятно легко, а негативные последствия практически невозможно отладить?
+
+Существуют разные подходы:
+\begin{itemize}
+  
+  \item Языки,\only<1-2>{ с маниакальной страстью пытающиеся дать разработчикам способы написать очень быструю, но некорректную программу}\only<3>{ \sout{с маниакальной страстью пытающиеся дать разработчикам способы написать очень быструю, но некорректную программу}}\only<4->{ {\color{red}предоставляющие разработчикам документированное и низкоуровневое API для написания очень быстрых программ}}.
+  C/C++
+
+  \item Языки, сфокусированные на безопасности и с помощью управляемой среды\only<1>{ \sout{создающие}}\only<2->{ {\color{red}пытающиеся создать}} "песочницу".
+  Java
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[fragile, t]{Разные миры}
+\framesubtitle{Пример}
+
+\begin{lstlisting}
+ static volatile int x; static volatile int y;            
+void threadA() {      |    void threadB() {                                   
+      x = 1;          |          y = 1;                           
+  int a = y;          |      int b = x;                           
+}                     |    }                    
+\end{lstlisting}
+
+\pause
+C\footnote<2->{\tiny\url{https://godbolt.org/z/q4raxqrTe}}:
+
+\begin{lstlisting}
+                x = 0  ;  y = 0
+thread A               |    thread B          
+  (A.1) MOV [x] ,  1   |      (B.1) MOV [y] , 1  
+  (A.2) MOV EAX , [y]  |      (B.2) MOV EBX, [x] 
+\end{lstlisting}
+
+\pause
+Допустимые результаты: \texttt{(0, 0) (1, 0) (0, 1) (1, 1)}
+\end{frame}
+
+\begin{frame}[fragile, t, noframenumbering]{Разные миры}
+\framesubtitle{Пример}
+
+\begin{lstlisting}
+ static volatile int x; static volatile int y;            
+void threadA() {      |    void threadB() {                                   
+      x = 1;          |          y = 1;                           
+  int a = y;          |      int b = x;                           
+}                     |    }                    
+\end{lstlisting}
+
+
+Java\footnote{\tiny\url{https://github.com/Svazars/lang-mem-models-intro/tree/main/samples/java}}:
+
+\begin{lstlisting}
+                      x = 0  ;  y = 0
+thread A                     |    thread B          
+  (A.1) MOV [x] ,  1         |      (B.1) MOV [y] , 1  
+  (A.2) lock add [rsp], 0x0  |      (B.2) lock add [rsp], 0x0
+  (A.3) MOV EAX , [y]        |      (B.3) MOV EBX, [x] 
+\end{lstlisting}
+
+\pause
+\texttt{lock add [rsp], 0x0} $\approx$ \texttt{mfence} $\approx$ full memory barrier\footnote<2->{\tiny\url{https://shipilev.net/blog/2014/on-the-fence-with-dependencies/}}
+
+\pause
+Допустимые результаты: \texttt{(1, 0) (0, 1) (1, 1)}
+
+\end{frame}
+
+
+\begin{frame}[fragile, t, noframenumbering]{Разные миры}
+\framesubtitle{Пример}
+
+\begin{lstlisting}
+ static volatile int x; static volatile int y;            
+void threadA() {      |    void threadB() {                                   
+      x = 1;          |          y = 1;                           
+  int a = y;          |      int b = x;                           
+}                     |    }                    
+\end{lstlisting}
+
+Допустимые результаты в C: \texttt{(0, 0) (1, 0) (0, 1) (1, 1)}
+
+Допустимые результаты в Java: \texttt{(1, 0) (0, 1) (1, 1)}
+
+\pause
+Обычно пишут, что \texttt{volatile} в языке Си ограничивает только преобразования на уровне компилятора, а в языке Java -- ограничивает как компилятор, так процессор.
+
+\pause
+Но давать слишком простую модель реального мира -- плохо с педагогической точки зрения.
+
+\pause
+Поэтому защищу себя от гнева ваших будущих работодателей.
+
+\end{frame}
+
+
+\begin{frame}{Совет от мудрой совы}
+
+В языке С вместо \texttt{volatile} \textbf{всегда} используйте типы из \texttt{stdatomic.h}\footnote{\tiny\url{https://en.cppreference.com/w/c/language/atomic}} для разделяемых переменных.
+Если стандарт C11 не поддерживается используемым компилятором или в коде обычные переменные изменяются из разных потоков одновременно -- бегите.
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]{Разные миры}
+\framesubtitle{Выводы}
+
+\begin{itemize}
+ \item Пожалуйста, никогда и никому не говорите что \texttt{volatile} в С и в Java имеют один и тот же смысл
+ \item Не думайте, что бездумное добавление \textt{volatile} в вашу программу сделает её корректной (даже на Java это не так)
+ \item Всегда помните, что в разных языках "одинаковая"\ конструкция может иметь весьма разный смысл
+ \begin{itemize}
+    \item смена языкового стека
+    \item адаптация алгоритма из библиотеки/публикации
+    \item кросс-языковая трансляция
+ \end{itemize}
+\end{itemize}
+\end{frame}
+

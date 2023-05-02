@@ -1,0 +1,214 @@
+
+
+\section{Зачем писать многопоточный код?}
+\showTOC
+
+
+\begin{frame}{Зачем писать параллельные программы?}
+
+Зачем в языке программирования давать средства для написания параллельных(parallel)/конкурентных(concurrent) программ?\footnote{Rob Pike, Concurrency Is Not Parallelism, https://go.dev/blog/waza-talk}
+
+\pause
+
+Возможные варианты ответа:
+\begin{itemize}
+ \item Так принято еще с 2000-х годов
+ \item Современное оборудование фантастически многоядерное
+ \item Необходимо строить сложные системы, ориентированные на огромное число пользователей
+ \item А как иначе написать 
+ \begin{itemize}
+    \item сервер обработки входящий соединений?
+    \item многоагентную симуляцию?
+    \item игру-песочницу типа Factorio/Minecraft/RollercoasterTycoon/etc
+ \end{itemize}
+\end{itemize}
+
+\pause
+
+В подавляющем большинстве случаев, написание параллельного/распределенного/многопоточного кода -- это оптимизация.
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Альтернативы}
+\framesubtitle{Bash}
+
+Задача: подсчитать число слов в текстовом файле\footnote{\tiny\url{https://github.com/Svazars/lang-mem-models-intro/tree/main/samples/bash}}.
+
+\pause
+Последовательное исполнение
+\begin{lstlisting}
+wc 50_000_000.txt
+
+real    0m 4,900s
+user    0m 4,212s
+sys     0m 0,240s
+\end{lstlisting}
+
+\pause 
+Параллельное исполнение (2 процесса)
+\begin{lstlisting}
+{ ( head -n 25000000 50_000_000.txt | wc) & }
+{ ( tail -n 25000000 50_000_000.txt | wc) & }
+wait
+
+real    0m 2,323s
+user    0m 4,576s
+sys     0m 1,084s
+\end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]{Альтернативы}
+\framesubtitle{make}
+
+Задача: скомпилировать большой проект на языке C.
+
+\begin{lstlisting}
+make -j8
+\end{lstlisting}
+
+Аналогичные инструменты: 
+\begin{itemize}
+    \item ant/maven (Java)
+    \item groovy DSL (Jenkins)
+    \item sbt (Scala)
+    \item ...
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Параллелизм уровня процессов}
+\framesubtitle{Обсуждение}
+
+\begin{itemize}
+ \item ОС создана для того, чтобы быстро, эффективно и надежно управлять процессами
+ \item Независимые шаги вычислений можно выполнять в разных процессах
+ \item Write programs that do one thing and do it well\footnote{\url{https://en.wikipedia.org/wiki/Unix_philosophy}}
+\end{itemize}
+
+\pause
+Исполнение нескольких потоков вычислений внутри одного процесса не требуется.
+
+\pause 
+Параллелизм уровня потоков не нужен.
+
+\pause
+Многопоточность не нужна.
+
+\pause
+В чем недостатки подхода с использованием только процессов?
+
+\end{frame}
+
+
+\begin{frame}{Параллелизм уровня процессов}
+\framesubtitle{Недостатки}
+Процесс -- это идентифицируемая абстракция совокупности взаимосвязанных системных ресурсов на основе отдельного и {\color<3>[rgb]{1,0,0}{независимого виртуального адресного пространства}}\footnote{https://ru.wikipedia.org/wiki/Процесс\_(информатика)}.
+
+\pause
+
+Межпроцессное взаимодействие бывает: %TODO insert бывает, сказать что бывает и хорошо
+\begin{itemize}
+  \item Долгое (latency)
+  \item Дорогое (throughput)
+  \item Не всегда кросс-платформенное (Windows/POSIX API vs. protobuf)\footnote<2->{https://stackoverflow.com/questions/60649/cross-platform-ipc}
+  \item Не всегда надежное (разрыв соединения, смерть процесса)
+  \item Не всегда безопасное
+\end{itemize}
+
+\pause
+
+% TODO: давайте пожертвуем независимостью, вдруг будет лучше
+\end{frame}
+
+
+\begin{frame}{Параллелизм уровня потоков}
+
+Взаимодействие потоков исполнения (threads) внутри общего адресного пространства.
+
+\pause
+У каждого потока есть
+
+\begin{itemize}
+    \item машинный стек
+    \item идентификатор
+    \item обработчик сигналов
+    \item приоритет в планировщике задач
+    \item ...
+    \pause
+    \item быстрый доступ к общей разделяемой памяти
+\end{itemize}
+
+\pause
+Ремарка: целенаправленно избегаю альтернатив 
+\begin{itemize}
+ \item green threads/lightweight threads
+ \item fibers/coroutines
+ \item actors
+ \item agents in distributed computing
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}{Параллелизм уровня потоков}
+\framesubtitle{Применения}
+
+\begin{itemize}
+ \item Базы данных. Пользователь пишет SQL-запрос, но одна СУБД одновременно обрабатывает много запросов. 
+ % Иллюзия однозадачности.
+ \pause
+
+ \item Сервер. Клиент шлет запросы, получает ответы, но одна система допускает одновременную обработку нескольких соединений.
+
+\pause
+ 
+ \item Сборщик мусора. Вы создали объект, попользовались им и забыли. Не задумываясь о том, что где-то там есть сборщик мусора, которые отследит ненужность объекта и переиспользует память под следующий объект.
+ \pause
+ 
+  \begin{itemize}
+    \item Независимые задачи (parallel marking, parallel sweeping)
+    \pause
+ 
+    \item Одновременные задачи (concurrent marking, concurrent copying)
+    \pause
+ 
+    \item Работоспособность при наличии блокирующих вызовов (поток завис в \texttt{epoll\_wait}, а мусор всё равно был собран)
+  \end{itemize}
+
+\pause
+ 
+ \item ...
+
+\end{itemize}
+ 
+\end{frame}
+
+
+\begin{frame}{Параллелизм уровня потоков}
+\framesubtitle{Выводы}
+
+  Весьма хорошая и актуальная оптимизация.
+
+  Способ добиться одновременного исполнения в рамках одного процесса.
+  \begin{itemize}
+    \item Всё виртуальное адресное пространство -- общий ресурс
+    \item Все CPU -- общий ресурс
+    \item Быстрая скорость обмена информацией
+    \item Возможность совместно \only<1-3>{использовать}\only<4>{{\color{red} изменять}} данные
+  \end{itemize}
+
+  \pause
+  Есть общий ресурс -- есть проблемы.
+
+  Deadlock, livelock, starvation, priority inversion, lock convoy, thundering herd problem, ABA problem, use-after-free ...
+
+  \pause
+  Сегодня не об этом.
+
+\end{frame}
+
+
+
+

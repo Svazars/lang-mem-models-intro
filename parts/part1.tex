@@ -1,0 +1,155 @@
+
+\section{Компилятор хотел как лучше, а получилось...}
+\showTOC
+
+\begin{frame}[fragile]{Классические оптимизации однопоточного кода}
+\framesubtitle{Inventing reads}
+
+\begin{lstlisting}
+static int a;
+void foo_1() {
+    int tmp;
+    while (tmp = a) {
+        do_something_with(tmp);
+    }
+}
+\end{lstlisting}
+
+\pause
+
+Имеет ли право компилятор сэкономить регистры и переписать функцию следующим образом?
+
+\begin{lstlisting}
+void foo_2() {
+    while (a) {
+        do_something_with(a);
+    }
+}
+\end{lstlisting}
+
+\pause
+
+Если в программе существуют другие потоки, изменяющие переменную \texttt{a} -- такое преобразование безопасно?
+\end{frame}
+
+
+\begin{frame}[fragile]{Классические оптимизации однопоточного кода}
+\framesubtitle{Removing reads}
+
+\begin{lstlisting}
+static int a;
+void foo_1() {
+    int tmp;
+    while (tmp = a) {
+        do_something_with(tmp);
+    }
+}
+\end{lstlisting}
+
+\pause
+
+Имеет ли право компилятор уменьшить количество загрузок из памяти и переписать функцию следующим образом?
+
+\begin{lstlisting}
+void foo_3() {
+    int tmp = a;
+    if (tmp)
+        for (;;) do_something_with(tmp);
+}
+\end{lstlisting}
+
+\pause
+
+Если в программе существуют другие потоки, изменяющие переменную \texttt{a} -- такое преобразование безопасно?
+\end{frame}
+
+
+\begin{frame}[fragile]{Классические оптимизации однопоточного кода}
+\framesubtitle{Godbolt}
+
+\begin{adjustbox}{width=\textwidth,height=1cm,keepaspectratio}
+\begin{lstlisting}
+static int a;
+void foo_1() {
+    int tmp;
+    while (tmp = a) {
+        do_something_with(tmp);
+    }
+}
+\end{lstlisting}
+\end{adjustbox}
+
+\texttt{x86-64 clang 16.0.0 -O2}\footnote{\url{https://godbolt.org/z/51W5adoTG}}:
+
+\begin{adjustbox}{width=\textwidth,height=2cm,keepaspectratio}
+\begin{lstlisting}
+foo_1:                                  
+        push    rbx
+        mov     ebx, dword ptr [rip + a]
+        test    ebx, ebx
+        je      .LBB1_2
+.LBB1_1:                           #<---------|    
+        mov     edi, ebx           #          |
+        call    do_something_with  #          |
+        jmp     .LBB1_1            #----------|
+.LBB1_2:
+        pop     rbx
+        ret
+\end{lstlisting}
+\end{adjustbox}
+
+\end{frame}
+
+
+\begin{frame}{Классические оптимизации однопоточного кода}
+\framesubtitle{Конфликт интересов}
+
+\begin{itemize}
+    \item Хотим мощный оптимизирующий компилятор, чтобы наш однопоточный код работал как можно быстрее
+    \item Не хотим, чтобы преобразования программ ломали наш многопоточный код, который улучшает производительность
+\end{itemize}
+
+\pause
+Классический пример конфликтующих оптимизаций.
+
+\pause
+Как бы вы решали данную проблему?
+
+\pause
+\begin{itemize}
+ \item Запретить какие-то преобразования (blacklist)
+ \item Разрешить только "правильные"\ преобразования (whitelist)
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Вызовы для авторов языков}
+
+Необходимо понять, какие преобразование "подозрительные"\ и включить нужные ремарки в спецификацию языка.
+
+\pause
+\begin{itemize}
+ \item Как понять, что запреты исчерпывающие? 
+ \item Как проверить, что указания непротиворечивы?
+\end{itemize}
+
+\pause
+В примере "removing reads"\ используются довольно простые классические преобразования. Компиляторная классика -- CSE, DCE, UCE, loop-invariant code motion.
+
+\pause
+Надо написать некоторую спецификацию того, как различные потоки видят изменения разделяемой памяти (переменных, объектов, полей). 
+
+\pause
+Соблюсти баланс между \textit{понятностью}, \textit{производительностью} и \textit{устойчивостью}.
+
+\end{frame}
+
+\begin{frame}{Выводы}
+
+\begin{itemize}
+    \item Очевидные и верные преобразования однопоточных программ очень часто искажают поведение многопоточного кода, использующего общую память 
+    \item Если язык программирования не готов радикально отказаться от общего изменяемого состояния\footnote{\tiny\url{https://en.wikipedia.org/wiki/Actor_model}}\textsuperscript{,}\footnote{\tiny\url{https://en.wikipedia.org/wiki/Communicating_sequential_processes}} или попытался, но не смог\footnote{\tiny\url{https://kotlinlang.org/docs/multiplatform-mobile-concurrency-overview.html#global-state}}, то необходимо определить "границы дозволенного"\ для оптимизаций и не очень сильно удивлять пользователей языка
+    \item Language memory model -- описание того, какие есть гарантии у различных потоков приложения при обращении к разделяемым ячейкам памяти (переменным, объектам, полям, элементам массивов ...)
+\end{itemize}
+
+\end{frame}

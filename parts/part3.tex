@@ -1,0 +1,910 @@
+\section{Language memory models. Примеры из жизни.}
+\showTOC
+
+\begin{frame}[t]{Есть ли более простые решения?}
+
+Я простой Java-программист, я не хочу даже думать о тысячах оптимизаций, которыми компилятор может сломать мою программу.
+
+\pause
+Также я не хочу читать тысячи страниц спецификации процессорной архитектуры, чтобы расставлять какие-то барьеры. 
+
+\pause
+\only<3-4>{
+Intel® 64 and IA-32 Architectures Software Developer’s Manual:
+\begin{itemize}
+	\item Volume 1: Basic Architecture (458 страниц)
+	\item Volume 2: Instruction Set Reference, A-Z (1513 страниц)
+	\item Volume 3: System Programming Guide (1638 страниц)
+\end{itemize}
+}
+
+\only<4>{Размеры мануала по ARM64 (v8, для конкретики) сами найдите.}
+
+\pause
+\pause
+Хочу кросс-платформенный код писать и чтобы он был понятный, простой и поддерживаемый.
+
+\pause
+
+Требуется описание операций с памятью и их свойств в используемом языке программирования
+\end{frame}
+
+
+\begin{frame}[t]{Есть ли более простые решения?}
+
+Я простой Java-программист, я не хочу даже думать о тысячах оптимизаций, которыми компилятор может сломать мою программу.
+
+Также я не хочу читать тысячи страниц спецификации процессорной архитектуры, чтобы расставлять какие-то барьеры. 
+
+Хочу кросс-платформенный код писать и чтобы он был понятный, простой и поддерживаемый.
+
+Требуется описание операций с памятью и их свойств в используемом языке программирования
+\begin{itemize}
+	\item Независимое от платформы (ОС, процессорная архитектура) 
+	\item Независимое от среды исполнения (компилятор, сборщик мусора)
+	\item Независимое от версии языка\footnote{Недостижимый идеал или суровая действительность обратной совместимости?} 
+\end{itemize}
+
+\pause
+Требуется language memory model.
+\end{frame}
+
+
+\begin{frame}{Language Memory Model}
+
+\begin{itemize}
+    \item  Как писать такой документ? Литературным английским? В виде алгоритма? В виде набора разрешающих правил? В виде набора запрещающих правил? 
+    \item  Должна ли спецификация меняться от версии к версии? 
+    \item  Лучше чтобы она была более строгой или более слабой? 
+    \item  Можно ли проверить что придуманные правила согласованы между собой?   
+    \item  Можно ли гарантировать, что любая программа будет адекватно и однозначно описываться придуманной моделью?
+    \item  Существует ли какой-то специальный математический аппарат, облегчающий написание спецификации?
+    \item  А пользователи языка должны смочь это прочитать? Понять? Применить на практике?
+\end{itemize}
+
+\pause
+Соблюсти баланс между \textit{понятностью}, \textit{производительностью} и \textit{устойчивостью}
+\end{frame}
+
+\begin{frame}[t]{О практической пользе данной лекции}
+
+\only<1>{
+На слайде~\insertframenumber~самое время задаться именно таким вопросом.
+}
+
+\only<2-3>{
+С точки зрения большинства прикладных программистов, модель памяти не нужна.
+}
+\only<4->{
+\sout{С точки зрения большинства прикладных программистов, модель памяти не нужна.}
+}
+
+\only<3>{
+С другой стороны, большинство программистов, согласно опросам из интернета, пишет на таких языках как Python, JavaScript, VisualBasic, PHP.
+}
+
+\only<5->{
+С точки зрения большинства прикладных программистов, модель памяти не должна мешать <<делать дело>>.
+}
+
+\only<6->{
+А если случается необъяснимая бесовщина, то Senior Software Engineer <<придёт и молча поправит всё>>.
+}
+
+\only<7->{
+Глупо скрывать от вас тот факт, что материал про модели памяти -- узкоспециализированный. 
+}
+
+\only<8->{С другой стороны, вы уже не доверяете компилятору и процессору.} \only<9->{Осталось совсем немного.}
+
+\only<10>{Потеряйте веру в людей ;)}\only<11->{Потеряйте веру в \sout{людей} дизайнеров языков программирования.}
+
+\end{frame}
+
+\begin{frame}{Holy war warning}
+
+Следующие несколько слайдов могут бросить тень на ваш любимый язык программирования.
+
+\pause
+
+Каждый из упомянутых промышленных языков программирования имеет спецификацию и, в том числе, описание модели памяти. Я педантично приведу соответствующие ссылки.
+Но продолжу говорить, что у некоторых языков нет\only<3->{\ {\color{red} вменяемой}} модели памяти.
+
+\pause
+\pause
+
+Порядок упоминания языков не соответствует <<качеству>> языка, просто так мне проще выстроить повествование.
+
+\pause
+
+Поехали.
+
+\end{frame}
+
+
+
+% Соблюсти баланс между \textit{понятностью}, \textit{производительностью} и \textit{устойчивостью}
+
+
+\begin{frame}[fragile, t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: запретить и не пущать}
+Swift\footnote{\tiny\url{https://github.com/apple/swift-evolution/blob/main/proposals/0282-atomics.md}}
+
+\only<1> {
+\begin{quote}
+Concurrent write/write or read/write access to the same location in memory generally remains undefined/illegal behavior, unless all such access is done through a special set of primitive atomic operations.
+\end{quote}
+}
+
+\only<2> {
+\begin{quote}
+Concurrent write/write \sout{or read/write} access to the same location \sout{in memory generally} remains \sout{undefined/}illegal behavior, unless \sout{all such access} is done through \sout{a special set of primitive} atomic operations.
+\end{quote}	
+}
+
+\only<3->{
+\begin{quote}
+Concurrent write/write access to the same location remains illegal behavior, unless is done through atomic operations.
+\end{quote}
+}
+
+\begin{onlyenv}<4->
+\begin{lstlisting}
+import Foundation
+class Bird {}
+var S = Bird()
+let q = DispatchQueue.global(qos: .default)
+q.async { while(true) { S = Bird() } }
+while(true) { S = Bird() }
+\end{lstlisting}
+\end{onlyenv}
+
+\only<5->{
+При запуске происходит ошибка \texttt{double free or corruption}.
+}
+
+\only<6->{
+Почему? Попробуйте догадаться сами\footnote{\tiny\url{https://tonygoold.github.io/arcempire/}} или подсмотрите в решебник\footnote{\tiny\url{https://github.com/apple/swift/blob/main/docs/proposals/Concurrency.rst}}.
+}
+
+\end{frame}
+
+
+\begin{frame}[t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: reference implementation is a specification}
+
+{\small
+ECMA-334, \texttt{C\# language specification}\footnote{\tiny\url{https://www.ecma-international.org/publications-and-standards/standards/ecma-334}}: \texttt{14.5.4 Volatile fields} (2)
+}
+
+{\small
+ECMA-335, \textt{CLI}\footnote{\tiny\url{https://www.ecma-international.org/publications-and-standards/standards/ecma-335/}}: \texttt{I.12.6 Memory model and optimizations} (4)
+}
+\end{frame}
+
+
+\begin{frame}[t,noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: reference implementation is a specification}
+
+{\small
+ECMA-334, \texttt{C\# language specification}: \texttt{14.5.4 Volatile fields} (2)
+}
+
+{\small
+ECMA-335, \textt{CLI}: \texttt{I.12.6 Memory model and optimizations} (4)
+}
+
+Модель памяти также описана для .NET\footnote{\tiny\url{https://github.com/dotnet/runtime/blob/main/docs/design/specs/Memory-model.md}}.
+\pause
+Официально несовместим с предыдущими документами.
+\only<3>{
+\begin{quote}
+.NET runtime assumes that the side-effects of memory reads and writes include only observing and changing values at specified memory locations. This applies to all reads and writes - volatile or not. \textbf{This is different from ECMA model.}
+\end{quote}
+}
+
+\end{frame}
+
+\begin{frame}[t,noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: reference implementation is a specification}
+
+{\small
+ECMA-334, \texttt{C\# language specification}: \texttt{14.5.4 Volatile fields} (2)
+}
+
+{\small
+ECMA-335, \textt{CLI}: \texttt{I.12.6 Memory model and optimizations} (4)
+}
+
+Модель памяти также описана для .NET, официально несовместима с предыдущими документами.
+
+\pause
+Модель памяти также описана для Mono\footnote{\tiny\url{https://www.mono-project.com/docs/advanced/runtime/docs/atomics-memory-model/}}, который старается сохранять конформность с .NET.
+\only<3>{
+\begin{quote}
+... here is a quirk in the .NET implementation where these methods actually use the MemoryBarrier method to insert a barrier. This is stronger than a simple acquire or release barrier. We do the same for compatibility.
+\end{quote}
+}
+\end{frame}
+
+
+\begin{frame}[t,noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: reference implementation is a specification}
+
+{\small
+ECMA-334, \texttt{C\# language specification}: \texttt{14.5.4 Volatile fields} (2)
+}
+
+{\small
+ECMA-335, \textt{CLI}: \texttt{I.12.6 Memory model and optimizations} (4)
+}
+
+Модель памяти также описана для .NET, официально несовместима с предыдущими документами.
+
+Модель памяти также описана для Mono, который старается сохранять конформность с .NET.
+
+\pause
+Общий подход спецификации:
+\begin{itemize}
+	\pause
+	\item \only<3>{Сказать, что соответствующие операции имеют 
+	\begin{itemize}
+		\item release semantics
+		\item acquire semantics
+		\item full-fence semantics
+	\end{itemize}
+	что бы это ни значило :)
+	}
+	\pause
+	Использовать термины, не давая строгие определения.
+
+	\pause
+	\item Явно запретить некоторые перестановки операций с памятью.
+\end{itemize}
+
+\pause
+Насколько полон список "запретных"\ оптимизаций, как будет система эволюционировать в будущем, будут ли еще отступления от стандарта не раскрыто.
+
+\end{frame}
+
+\begin{frame}[t,noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: reference implementation is a specification}
+
+{\small
+ECMA-334, \texttt{C\# language specification}: \texttt{14.5.4 Volatile fields} (2)
+}
+
+{\small
+ECMA-335, \textt{CLI}: \texttt{I.12.6 Memory model and optimizations} (4)
+}
+
+Модель памяти также описана для .NET, официально несовместима с предыдущими документами.
+
+Модель памяти также описана для Mono, который старается сохранять конформность с .NET.
+
+Общий подход спецификации:
+\begin{itemize}
+	\item Использовать термины, не давая строгие определения.
+	\item Явно запретить некоторые перестановки операций с памятью.
+\end{itemize}
+
+Насколько полон список "запретных"\ оптимизаций, как будет система эволюционировать в будущем, будут ли еще отступления от стандарта не раскрыто.
+
+Microsoft style\footnote{\url{https://ru.wikipedia.org/wiki/Embrace,_Extend,_and_Extinguish}}
+\end{frame}
+
+
+\begin{frame}[fragile, t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: strict consistency}
+
+Наиболее интуитивное определение для операций с памятью -- они все происходят атомарно и их все можно расположить на единой шкале времени\footnote{\tiny\url{https://en.wikipedia.org/wiki/Consistency_model#Strict_consistency}}.
+
+\end{frame}
+
+
+\begin{frame}[fragile, t, noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: strict consistency}
+
+Наиболее интуитивное определение для операций с памятью -- они все происходят атомарно и их все можно расположить на единой шкале времени.
+
+
+\begin{lstlisting}
+
+void thread1() {      |    void thread2() {                                   
+                      |
+      foo()           |          baz()                           
+                      |
+                      |
+      bar()           |          foo()                           
+                      |
+}                     |    }                    
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile, t, noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: strict consistency}
+
+Наиболее интуитивное определение для операций с памятью -- они все происходят атомарно и их все можно расположить на единой шкале времени.
+
+\begin{lstlisting}
+
+void thread1() {      |    void thread2() {                                   
+       lock()         |           lock()
+      foo()           |          baz()                           
+       unlock()       |           unlock()
+       lock()         |           lock()
+      bar()           |          foo()                           
+       unlock()       |           unlock()
+}                     |    }                    
+\end{lstlisting}	
+
+\end{frame}
+
+\begin{frame}[fragile, t, noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: strict consistency}
+
+Наиболее интуитивное определение для операций с памятью -- они все происходят атомарно и их все можно расположить на единой шкале времени.
+Защищать глобальным мьютексом каждую операцию.
+
+\begin{lstlisting}
+static GlobalInterpreterLock GIL = ...;
+void thread1() {      |    void thread2() {                                   
+   GIL.lock()         |       GIL.lock()
+      foo()           |          baz()                           
+   GIL.unlock()       |       GIL.unlock()
+   GIL.lock()         |       GIL.lock()
+      bar()           |          foo()                           
+   GIL.unlock()       |       GIL.unlock()
+}                     |    }                    
+\end{lstlisting}	
+
+\end{frame}
+
+\begin{frame}[fragile, t, noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: strict consistency}
+
+Наиболее интуитивное определение для операций с памятью -- они все происходят атомарно и их все можно расположить на единой шкале времени.
+Защищать глобальным мьютексом каждую операцию.
+ 
+\pause
+Прям как в Python!
+
+\pause
+Потоки в языке есть\footnote<3->{\tiny\url{https://docs.python.org/3/library/threading.html}}, просто их неэффективность является "особенностью"\ интерпретатора CPython.
+
+\pause
+Но PyPy тоже не собирается отказываться от GIL\footnote<4->{\tiny\url{https://doc.pypy.org/en/latest/faq.html#does-pypy-have-a-gil-why}}.
+
+\pause
+Попытка переделать модель языка пока не увенчалась успехом\footnote<5->{\tiny\url{https://peps.python.org/pep-0583/}}.
+
+\pause
+Просто так выбросить GIL мешает не столько великодушный пожизненный диктатор\footnote<6->{\tiny\url{https://www.artima.com/weblogs/viewpost.jsp?thread=235725}}, сколько нежелание замедлять скриптовый язык еще на 10-20-30\%, ломая интероп с нативными библиотеками\footnote<6->{\tiny\url{https://peps.python.org/pep-0703/}}.
+\end{frame}
+
+
+\begin{frame}[fragile, t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: strict consistency}
+
+Наиболее интуитивное определение для операций с памятью -- они все происходят атомарно и их все можно расположить на единой шкале времени.
+
+\pause
+Пусть в языке вообще не будет потоков.
+
+\pause
+Один поток обрабатывает события, каждое из которых может породить другие, возможно отложенные, события.
+\pause
+Event loop.
+
+\pause
+Прям как в JavaScript!
+
+\pause
+Оказалось, что пользователи любят использовать все ядра своих систем.
+\pause
+Можно запускать дополнительных независимых агентов (web workers) и общаться сообщениями\footnote<7->{\tiny\url{https://www.w3schools.com/html/html5_webworkers.asp}}.
+\pause
+Можно разделять между агентами массивы байтов\footnote<8->{\tiny\url{https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer}}.
+\pause
+Получить data race и думать, что это значит\footnote<9->{\tiny "Repairing and Mechanising the JavaScript Relaxed Memory Model"\ \url{https://arxiv.org/abs/2005.10554}}.
+
+\end{frame}
+
+
+\begin{frame}[t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Наивные подходы: метод страуса}
+
+C/С++ до стандартов C++11\footnote{\tiny\url{https://en.wikipedia.org/wiki/C\%2B\%2B11#Multithreading_memory_model}}
+
+\pause
+\begin{itemize}
+	\item С точки зрения стандарта, потоков не существовало. Были библиотеки их реализующие.
+	\item Каждый проект изобретал свои костыли. Специфичные компилятору, процессору, среде запуска. 
+	\item Любой data race -- undefined behaviour. Не подходит для безопасных языков.
+\end{itemize}
+
+\pause
+Экономия времени дизайнеров языка ценой увеличенных издержек прикладных программистов.
+\end{frame}
+
+
+\begin{frame}[t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Прагматичные подходы: дай человеку удочку}
+
+C/С++ до соответствующих стандартов + POSIX threads\footnote{\tiny\url{https://en.wikipedia.org/wiki/Pthreads}}
+%
+\pause
+\begin{itemize}
+	\item С точки зрения стандарта, потоков не существовало. Появилась универсальная библиотека их реализующая.
+	\item Костыли собраны в одном месте, исходнике библиотеки.
+	\item Любой data race -- всё еще undefined behaviour. Use mutexes, Luke!
+\end{itemize}
+
+\pause
+Во-первых, написание такой библиотеки представляет большой труд с кучей платформенно-специфичных трудностей.
+
+\pause
+
+Во-вторых, "Threads Cannot Be Implemented As a Library"\footnote<4->{\tiny\url{https://www.hpl.hp.com/techreports/2004/HPL-2004-209.pdf}}.
+\pause
+
+\begin{quote}
+ The Pthreads specification prohibits races, i.e. accesses to a shared variable while another thread is modifying it. ... the
+ problem here is that whether or not a race exists depends on the semantics of the programming language, which in turn requires that we have a properly defined memory model.
+ Thus this definition is circular.
+\end{quote}
+%
+%%Даже эксперты ошибаются TODO-link-for-libc-semaphore-probelm, link-for-libc-wait-notify-bug, link-to-membars-in-kernel-om-arm32, whatever else
+%%И пользователи ворчат на тему недостаточной производительности, пишут свои (зачастую ненадежные) решения.
+\end{frame}
+
+\begin{frame}[t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Прагматичные подходы: дай человеку спиннинг}
+
+C/С++ до 11 версии + POSIX threads + санитайзеры
+
+\pause
+
+Динамические проверки свойств программы:
+\begin{itemize}
+	\item Поиск гонок
+	\item Поиск неверной работы с памятью (use-after-free, leak, uninitialized memory access etc)
+	\item Поиск undefined behaviour
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}[t, noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Прагматичные подходы: дай человеку спиннинг}
+
+C/С++ до 11 версии + POSIX threads + санитайзеры
+
+Динамические проверки свойств программы:
+\begin{itemize}
+	\item Поиск гонок
+	\item Поиск неверной работы с памятью (use-after-free, leak, uninitialized memory access etc)
+	\item Поиск undefined behaviour
+\end{itemize}
+
+Valgrind\footnote{\tiny\url{https://valgrind.org/}}
+
+LLVM sanitizers\footnote{\tiny\url{https://github.com/google/sanitizers}}
+
+\end{frame}
+
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Прагматичные подходы: разрешенное подмножество операций}
+
+Специфицировать подмножество операций \textbf{языка}, предназначенных для многопоточных программ.
+
+\begin{itemize}
+\pause
+\item C/C++ atomics
+
+\pause
+\item Swift/ObjC NSLocking
+
+\pause
+\item Java-1996 volatile
+\end{itemize}
+
+\pause
+Не путайте с реализацией на уровне библиотеки pthreads!
+
+\pause
+Не так просто сделать: "The Java Memory Model is Fatally Flawed"\ , William Pugh, 2000\footnote<6->{\tiny\url{http://www.cs.umd.edu/~pugh/java/broken.pdf}}
+
+\end{frame}
+
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Альтернативные подходы}
+
+Модель программирования без (явного) разделяемого состояния.
+\pause
+\begin{itemize}
+	\item Communicating sequential processes
+	\item Actor model
+\end{itemize}
+
+\pause
+Декларативный DSL для организации вычислений.
+\pause
+\begin{itemize}
+	\item OpenMP {\tiny\url{https://www.openmp.org/}}
+	\item Intel TBB {\tiny\url{https://github.com/oneapi-src/oneTBB}}
+	\item MPI {\tiny\url{https://www.open-mpi.org/}}
+	\item Java parallel streams {\tiny\url{https://docs.oracle.com/javase/tutorial/collections/streams/parallelism.html}}
+	\item MapReduce {\tiny\url{https://research.google/pubs/pub62/}}
+	\item Resilient Distributed Datasets {\tiny\url{https://dl.acm.org/doi/10.5555/2228298.2228301}}
+\end{itemize}
+
+\pause
+Абстракции текут\footnote<5->{\tiny\url{https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/}} и в большинстве случаев вносят издержки.
+
+\end{frame}
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Продвинутые подходы: исчерпывающая модель памяти}
+
+\pause
+С использованием всего доступного арсенала: 
+\begin{itemize}
+	\pause
+	\item An action \textit{a} is described by a tuple $\langle t, k, v, u\rangle$ comprising ...\
+	\pause
+	\item Частичные, линейные порядки; транзитивное замыкание бинарных отношений; happens-before
+	\pause
+	\item Causality requirements, circular hp, out-of-thin-air problem
+	\pause
+	\item Adaptation to h/w models\footnote<6->{\tiny"JSR-133 Cookbook for Compiler Writers"\ \url{https://gee.cs.oswego.edu/dl/jmm/cookbook.html}}
+	\pause
+	\item Каждый data race имеет разрешенные и запрещенные последствия
+\end{itemize}
+
+\pause
+Подход обладает рядом недостатков:
+\begin{itemize}
+	\item Очень сложно, долго и дорого.
+	\item Будут недочеты\footnote<8->{\tiny"Java Memory Model Examples: Good, Bad and Ugly"\ \url{https://groups.inf.ed.ac.uk/request/jmmexamples.pdf}}.
+	\item Мало кто в мире будет в состоянии полностью понять написанное. Еще меньше людей смогут применить на практике.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[t]{Java Memory Model}
+Java language specification: \url{https://docs.oracle.com/javase/specs/}
+
+\pause
+Глава 17 "Threads and Locks"
+
+\pause
+Раздел 17.4 Memory Model (15 страниц)
+
+\pause
+Основная идея -- давайте попытаемся ввести частичный порядок среди различных событий: операции с полями, создание потоков, исполнение synchronized.
+Это поможет нам рассуждать о том, что было "раньше"\ либо "позже".
+
+\end{frame}
+
+
+\begin{frame}[t,noframenumbering]{Java Memory Model}
+Java language specification: \url{https://docs.oracle.com/javase/specs/}
+
+Глава 17 "Threads and Locks"
+
+Раздел 17.4 Memory Model (15 страниц)
+
+Основная идея -- давайте попытаемся ввести частичный порядок среди различных событий: операции с полями, создание потоков, исполнение synchronized.
+Это поможет нам рассуждать о том, что было "раньше"\ либо "позже".
+
+
+Попытки рассказать просто о сложном от Алексея Шипилева\footnote{\tinyДля любителей выбирать между слайдами, конспектом и видео: \url{https://shipilev.net}}: \url{https://shipilev.net/talks/geecon-May2018-jmm.pdf}. Докладчик прорекламирует сам себя на слайде "Further Reading".
+
+\end{frame}
+
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Продвинутые подходы: исчерпывающая модель памяти + паттерны}
+
+Doug Lea, private communication with Aleksey Shipilev, 2013\footnote{\tiny Citation from \url{https://shipilev.net/blog/2014/jmm-pragmatics}, slide 109}
+
+\begin{quote}
+The best way to build up a small repertoire of constructions that you know the answers for and then never think about the JMM rules again unless you are forced to do so! Literally nobody likes figuring things out from the JMM rules as stated, or can even routinely do so correctly.
+This is one of the many reasons we need to overhaul JMM someday.
+\end{quote}
+\end{frame}
+
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Продвинутые подходы: исчерпывающая модель памяти + паттерны}
+
+Нам понадобятся:
+\begin{itemize}
+	\item Полная и исчерпывающая модель памяти языка
+	\item Набор заведомо корректных и легко запоминаемых шаблонов многопоточного программирования
+\end{itemize}
+
+\pause
+В Java неувядающей классикой считается шаблон "Double checked locking"\footnote<2->{\tiny"Double-Checked Locking is Broken"\ \url{http://www.cs.umd.edu/~pugh/java/memoryModel/DoubleCheckedLocking.html}}.
+\pause
+Который, если аккуратно его реализовать, в современной Java корректен. В некоторых командах вполне заслуженно считается антипаттерном/опасным кодом, т.к. существуют альтернативы\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/Initialization-on-demand_holder_idiom}}.
+ 
+\pause
+Рекомендую замечательные книги "Java Concurrency in Practice"\ , "Effective Java"\ и прекрасную документацию к пакету \texttt{java.util.concurrent}.
+
+
+\end{frame}
+
+\begin{frame}[t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Продвинутые подходы: исчерпывающая модель памяти + паттерны}
+
+\pause
+Недостатки подхода:
+
+\pause
+ \begin{itemize}
+ 	\item Недостатки? Какие недостатки?
+ 	\pause
+ 	\item Вы же на курсе по Java, а это самый лучший язык программирования :)
+ \end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[fragile,t,noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Продвинутые подходы: исчерпывающая модель памяти + паттерны}
+
+Многопоточность сама по себе всё еще остается весьма сложной сущностью.
+\begin{itemize}
+	\item Java Concurrency in Practice -- 403 страницы
+	\item The Art of Multiprocessor Programming -- 508 страниц
+	\item Is Parallel Programming Hard, And, If So, What Can You Do About It? -- 634 страницы
+\end{itemize}
+
+\pause
+\begin{quote}
+ ... во многой мудрости много печали; и кто умножает познания, умножает скорбь.
+\end{quote}
+\end{frame}
+
+
+\begin{frame}[fragile,t,noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Продвинутые подходы: исчерпывающая модель памяти + паттерны}
+
+Многопоточность сама по себе всё еще остается {\color{red} интересной и непонятной штукой}.
+\begin{itemize}
+	\item Java Concurrency in Practice -- 403 страницы
+	\item The Art of Multiprocessor Programming -- 508 страниц
+	\item Is Parallel Programming Hard, And, If So, What Can You Do About It? -- 634 страницы
+\end{itemize}
+
+\end{frame}
+
+
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{А что же плюс\'{ы}???}
+
+\pause
+Модель памяти для С++11 разрабатывалась с учетом опыта и ошибок Java Memory Model. Во многом -- теми же людьми.
+
+\pause
+Но у C++ есть свой "багаж"\ -- undefined behaviour.
+
+\pause
+С одной стороны, это развязывает руки писателям спецификации -- не нужно описывать все-все краевые случаи (жизненно важно для управляемого безопасного языка).
+
+\pause
+С другой стороны, инструментов для контроля всего и вся в языке гораздо больше (volatile, atomics, inline assembly, pthreads ...).   
+
+\pause
+Мне сложно кратко и по существу рассказать про такой монументальный артефакт человеческого труда как "C++11"\ , поэтому просто посоветую почитать заметку от
+Russ Cox\footnote<6->{\tiny\url{https://research.swtch.com/plmm}}.
+
+\pause
+Кратко: кое-какие дизайн решения некоторые уважаемые люди считают как минимум спорными.
+
+\end{frame}
+
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Продвинутые подходы: ahead-of-time checks}
+
+\begin{itemize}
+	\pause
+	\item Сделать \textbf{некоторые} некорректные многопоточные программы некомпилируемыми (Rust)
+	\pause
+	\item Выразить свойства программы в типах, вывести эти свойства из исходного текста (сепарационные логики, языки с зависимыми типами, инструменты дедуктивной верификации программ)
+	\pause
+	\item Проверка моделей (model checking)
+\end{itemize}
+
+\pause
+Особенности:
+\begin{itemize}
+	\item Традиционно считается, что требуется б\'{о}льшая квалификация.
+	\item Иногда подход героически решает проблемы, которых и так нет в управляемых языках.
+	\item Понимаете достоинства и недостатки таких инструментов -- сумеете написать корректные программы почти на любом языке программирования.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Current research: hardware-level transactions}
+
+"Как перестать бояться data-race и начать жить?"
+
+\pause
+
+\begin{itemize}
+	\item Игнорировать -- некорректно
+
+	\pause
+	\item Запретить -- undefined behaviour hell (C++)
+
+	\pause
+	\item Детектировать -- проблема "spurious sanitizer fail"
+
+	\pause
+	\item Объяснить -- может быть весьма контринтуитивно (Java)
+
+	\pause
+	\item Не допускать -- страдать от deadlock-ов и т.п.
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[t,noframenumbering]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Current research: hardware-level transactions}
+
+"Как перестать бояться data-race и начать жить?"
+
+\begin{itemize}
+	\item Игнорировать -- некорректно
+	\item Запретить -- undefined behaviour hell (C++)
+	\item Детектировать -- проблема "spurious sanitizer fail"
+	\item Объяснить -- может быть весьма контринтуитивно (Java)
+	
+	\item \sout{Не допускать -- страдать от deadlock-ов и т.п.}
+
+	\pause
+	\item Не допускать -- "ляг, поспи, и всё пройдет"
+\end{itemize}
+
+\pause
+Hardware and Software transactional memory\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/Transactional_memory}}
+
+\pause
+Пока остается экспериментальной технологией.
+
+\end{frame}
+
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Current research: program synthesis}
+
+Генерировать программы по описанию алгоритма, корректные по построению.
+
+\pause
+Нет, я не предлагаю использовать ChatGPT.
+
+\pause
+Синтез программ -- это интересно!
+\begin{itemize}
+	\item Constraint solvers
+	\item Fuzzers
+	\item Evolutionary algorithms
+	\item Conformance testing
+	\item Program verification
+\end{itemize}
+
+\pause
+Пока -- не очень доступно:
+\begin{itemize}
+	\item Концептуальная сложность написания спецификаций
+	\item Вычислительная сложность поиска подходящей программы
+	\item Экономическая сложность внедрения и поддержки
+	\item Фундаментальная сложность проверки свойств произвольной программы
+\end{itemize}
+
+\end{frame}
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Подходы следующего поколения}
+
+\pause
+ 
+ Может быть именно вы станете их автором
+
+ % RustBelt Meets Relaxed Memory
+ % Finding and Fixing a Mismatch Between the Go Memory Model and Data-Race Detector: A Story on Applied Formal Methods
+ % TODO moiseenko pdkopae, lmm comparison + promising semantics for langs
+\end{frame}
+
+
+
+
+% \begin{frame}{Иллюстрирующий пример}
+% Пример
+% с IRIW
+% Есть порядок но не между всеми операциями. Он частичный. Допусакает несколько суенариев исполнение. Но не все.
+% MM -- задает множество допустимых сценариев исполнения
+% \end{frame}
+% 
+% 
+% \begin{frame}{Ключевое слово synchronized}
+% Иногда вы хотите линейный порядок. Для этого есть два основных иснтсрумена
+% - synchronized. Все блоки внутри будут упорядочены (для данного монитора)
+% Пример independent monitors
+% \end{frame}
+% 
+% \begin{frame}{Ключевое слово volatile}
+% Слишком крупно
+% 
+% - volatile, порядок на read/write полей.
+% Roach motel, шаблон с публикацией/инициализацией
+% \end{frame}
+% 
+% 
+% \begin{frame}{illustration with doubel checked locking}
+% но вообще есть более надежные инструменты типа singleton clinit и т.п.
+% \end{frame}
+
+
+\begin{frame}{Луч надежды}
+
+Вместо чтения фундаментальных трудов по многопоточному программированию, слабым моделям памяти и спецификациям процессоров, достаточно
+\begin{itemize}
+	\item выбрать \textit{правильный} язык программирования
+	\item прочитать короткий сборник советов о том, как пользоваться \texttt{java.util.concurrent}
+	\item освоить пару распространенных Java-специфичных шаблонов написания потокобезопасного кода 
+\end{itemize}
+
+\pause
+И можно приступать к написанию production кода.
+
+\pause
+Экономия времени прикладных программистов ценой увеличенных издержек дизайнеров языка.
+
+\end{frame}
+
+
+\begin{frame}{Предостережение}
+
+Помните! 
+
+\pause
+Все алгоритмические проблемы многопоточности (deadlock, livelock, starvation, lock convoy, priority inversion и т.п.) всё еще представляют угрозу.
+
+\pause
+Берегитесь! 
+
+\pause
+Очень мало людей \textbf{действительно} хорошо понимают современные модели памяти. Если вам приходится часто рассуждать про свой код в стиле "тут случается happens-before между двумя доступами к памяти, а потом через intra-thread order мы протягиваем зависимость до той volatile операции, чтобы в итоге ..."\ -- это ОЧЕНЬ тревожный звоночек. 
+
+\pause
+С вероятностью 99\% вы себя вводите в заблуждение. 
+
+\pause
+Уверены в корректности? Задумайтесь о поддерживаемости кода. Гораздо лучше, чтобы программа была собрана из понятных, широко известных и проверенных шаблонов-кирпичиков
+
+\end{frame}
+
+% TODO On the Validity of Program Transformations in the Java Memory Model” (2007).)
+% (Adve and Boehm, “Memory Models: A Case For Rethinking Parallel Languages and Hardware,” August 2010) 
+%  “Common Compiler Optimisations are Invalid in the C11 Memory Model and what we can do about it” (2015),
+% The Problem of Programming Language Concurrency Semantics”
+% “Constructing a Weak Memory Model”
+
+% Twenty-five years after the first Java memory model, and after many person-centuries of research effort, we may be starting to be able to formalize entire memory models. Perhaps, one day, we will also fully understand them. 
+
+
+% // kernel mm: failed lock do not imply any sort of barrier
+% // acquire+release are not full barrier for LOCKS !!! (wrt other cpu not holding lock)
+
+
+% TODO; шутка про то что volatile в Java != acquire-release в C++ это сематически две разных вещи. ЧТо же имеют в виду сишарперы?
+
