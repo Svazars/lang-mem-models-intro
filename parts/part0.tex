@@ -6,20 +6,32 @@
 
 \begin{frame}{Зачем писать параллельные программы?}
 
-Зачем в языке программирования давать средства для написания параллельных(parallel)/конкурентных(concurrent) программ?\footnote{Rob Pike, Concurrency Is Not Parallelism, https://go.dev/blog/waza-talk}
+Зачем в языке программирования давать средства для написания параллельных(parallel)/конкурентных(concurrent) программ?\footnote{\tiny Rob Pike, Concurrency Is Not Parallelism  \url{https://go.dev/blog/waza-talk}}
 
 \pause
 
 Возможные варианты ответа:
 \begin{itemize}
+ \pause
  \item Так принято еще с 2000-х годов
+
+ \pause
  \item Современное оборудование фантастически многоядерное
+
+ \pause
  \item Необходимо строить сложные системы, ориентированные на огромное число пользователей
+
+ \pause
  \item А как иначе написать 
  \begin{itemize}
+    \pause
     \item сервер обработки входящий соединений?
+    
+    \pause
     \item многоагентную симуляцию?
-    \item игру-песочницу типа Factorio/Minecraft/RollercoasterTycoon/etc
+
+    \pause
+    \item игру-песочницу типа Minecraft?
  \end{itemize}
 \end{itemize}
 
@@ -64,9 +76,13 @@ sys     0m 1,084s
 
 Задача: скомпилировать большой проект на языке C.
 
+\pause
+
 \begin{lstlisting}
 make -j8
 \end{lstlisting}
+
+\pause
 
 Аналогичные инструменты: 
 \begin{itemize}
@@ -82,9 +98,12 @@ make -j8
 \framesubtitle{Обсуждение}
 
 \begin{itemize}
+ \pause
  \item ОС создана для того, чтобы быстро, эффективно и надежно управлять процессами
+ \pause
  \item Независимые шаги вычислений можно выполнять в разных процессах
- \item Write programs that do one thing and do it well\footnote{\url{https://en.wikipedia.org/wiki/Unix_philosophy}}
+ \pause
+ \item Write programs that do one thing and do it well\footnote<4->{\tiny\url{https://en.wikipedia.org/wiki/Unix_philosophy}}
 \end{itemize}
 
 \pause
@@ -104,16 +123,25 @@ make -j8
 
 \begin{frame}{Параллелизм уровня процессов}
 \framesubtitle{Недостатки}
-Процесс -- это идентифицируемая абстракция совокупности взаимосвязанных системных ресурсов на основе отдельного и {\color<3>[rgb]{1,0,0}{независимого виртуального адресного пространства}}\footnote{https://ru.wikipedia.org/wiki/Процесс\_(информатика)}.
+Процесс -- это идентифицируемая абстракция совокупности взаимосвязанных системных ресурсов на основе отдельного и {\color<8>[rgb]{1,0,0}{независимого виртуального адресного пространства}}\footnote{\tiny{https://ru.wikipedia.org/wiki/Процесс\_(информатика)}}.
 
 \pause
 
 Межпроцессное взаимодействие бывает: %TODO insert бывает, сказать что бывает и хорошо
 \begin{itemize}
+  \pause
   \item Долгое (latency)
+
+  \pause
   \item Дорогое (throughput)
-  \item Не всегда кросс-платформенное (Windows/POSIX API vs. protobuf)\footnote<2->{https://stackoverflow.com/questions/60649/cross-platform-ipc}
+
+  \pause
+  \item Не всегда кросс-платформенное (Windows/POSIX API vs. protobuf)\footnote<5->{\tiny{https://stackoverflow.com/questions/60649/cross-platform-ipc}}
+
+  \pause
   \item Не всегда надежное (разрыв соединения, смерть процесса)
+
+  \pause
   \item Не всегда безопасное
 \end{itemize}
 
@@ -140,15 +168,6 @@ make -j8
     \item быстрый доступ к общей разделяемой памяти
 \end{itemize}
 
-\pause
-Ремарка: целенаправленно избегаю альтернатив 
-\begin{itemize}
- \item green threads/lightweight threads
- \item fibers/coroutines
- \item actors
- \item agents in distributed computing
-\end{itemize}
-
 \end{frame}
 
 
@@ -156,24 +175,24 @@ make -j8
 \framesubtitle{Применения}
 
 \begin{itemize}
- \item Базы данных. Пользователь пишет SQL-запрос, но одна СУБД одновременно обрабатывает много запросов. 
- % Иллюзия однозадачности.
+ \pause 
+ \item Web-сервер. Клиент шлет запросы, получает ответы, но одна система допускает одновременную обработку нескольких соединений.
+
  \pause
+ \item Многопользовательские игры. Сервер Minecraft позволяет различным игрокам одновременно взаимодействовать с окружением.
 
- \item Сервер. Клиент шлет запросы, получает ответы, но одна система допускает одновременную обработку нескольких соединений.
 
-\pause
- 
+ \pause 
  \item Сборщик мусора. Вы создали объект, попользовались им и забыли. Не задумываясь о том, что где-то там есть сборщик мусора, которые отследит ненужность объекта и переиспользует память под следующий объект.
- \pause
  
   \begin{itemize}
+    \pause
     \item Независимые задачи (parallel marking, parallel sweeping)
+    
     \pause
- 
     \item Одновременные задачи (concurrent marking, concurrent copying)
+    
     \pause
- 
     \item Работоспособность при наличии блокирующих вызовов (поток завис в \texttt{epoll\_wait}, а мусор всё равно был собран)
   \end{itemize}
 
@@ -191,12 +210,21 @@ make -j8
 
   Весьма хорошая и актуальная оптимизация.
 
+  \pause
   Способ добиться одновременного исполнения в рамках одного процесса.
+
   \begin{itemize}
+    \pause
     \item Всё виртуальное адресное пространство -- общий ресурс
+
+    \pause
     \item Все CPU -- общий ресурс
+
+    \pause
     \item Быстрая скорость обмена информацией
-    \item Возможность совместно \only<1-3>{использовать}\only<4>{{\color{red} изменять}} данные
+
+    \pause
+    \item Возможность совместно \only<1-8>{использовать}\only<9>{{\color{red} изменять}} данные
   \end{itemize}
 
   \pause
@@ -206,6 +234,8 @@ make -j8
 
   \pause
   Сегодня не об этом.
+
+  \pause
 
 \end{frame}
 

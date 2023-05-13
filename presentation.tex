@@ -151,19 +151,50 @@
 Уже 8 лет как JVM-инженер\footnote{\tiny Иван Углянский, Один день из жизни JVM-инженера, \url{https://habr.com/ru/company/jugru/blog/719614/}}
 
 \begin{itemize}
-    \item 2015 - 2019, Excelsior JVM with AOT compilation\footnote{\tiny\url{https://habr.com/ru/company/jugru/blog/437180/}}
-    \item 2019 - now, Huawei, Languages and Compilers lab\footnote{\tiny\url{http://rnew.tilda.ws/excelsiorathuawei}}
+    \pause
+    \item 2015 - 2019, Excelsior JVM with AOT compilation\footnote<2->{\tiny\url{https://habr.com/ru/company/jugru/blog/437180/}}
+
+    \pause
+    \item 2019 - now, Huawei, Languages and Compilers lab\footnote<3->{\tiny\url{http://rnew.tilda.ws/excelsiorathuawei}}
 \end{itemize}
 
+\pause
 Специализация -- рантайм JVM
 
+\pause
 Узкая специализация -- сборщики мусора
 
-Область интересов: многопоточность, слабые модели памяти, корректность многопоточных структур данных, автоматическое управление памятью
+\pause
+Область интересов: 
+\begin{itemize}
+    \pause
+    \item многопоточность
+    \pause
+    \item слабые модели памяти
+    \pause
+    \item корректность многопоточных структур данных
+    \pause
+    \item автоматическое управление памятью
+\end{itemize}
+\end{frame}
 
-Мое персональное когнитивное искажение: я так много страдал, отлаживая баги компилятора/своего параллельного кода/чужих реализаций многопоточных структур данных, что очень хочу поручить это дело бездушной машине. Потому питаю слабость к формализмам и математической нотации.
+
+\begin{frame}{Мое персональное когнитивное искажение}
+Я много страдал, отлаживая:
+\begin{itemize}
+    \pause
+    \item баги компилятора
+    \pause
+    \item своего параллельного кода
+    \pause
+    \item чужих реализаций многопоточных структур данных
+\end{itemize}
+
+\pause
+Очень хочу поручить это дело бездушной машине. Потому питаю слабость к формализмам и математической нотации.
 
 \end{frame}
+
 
 \begin{frame}{Disclaimer}
 
@@ -236,10 +267,15 @@
 \pause
 Иногда этого недостаточно, например, если вы
 \begin{itemize}
+    \pause
     \item разработчик продвинутых многопоточных алгоритмов
+    \pause
     \item автор оптимизирующего компилятора или рантайма
-    \item инженер по производительности, выжимающий максимальную скорость ценой хрупкого кода\footnote<4->{\tinyКрасная зона в терминах \url{https://youtu.be/p2b4JHESEOc}}
+    \pause
+    \item инженер по производительности, выжимающий максимальную скорость ценой хрупкого кода\footnote<6->{\tinyКрасная зона в терминах \url{https://youtu.be/p2b4JHESEOc}}
+    \pause
     \item исследователь корректности и надежности concurrent software 
+    \pause
     \item любите понимать происходящее на глубоком уровне
 \end{itemize}
 \end{frame}
