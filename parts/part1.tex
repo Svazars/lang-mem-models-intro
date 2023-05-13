@@ -2,102 +2,130 @@
 \section{Компилятор хотел как лучше, а получилось...}
 \showTOC
 
-\begin{frame}[fragile]{Классические оптимизации однопоточного кода}
+
+\begin{frame}[t,fragile]{Классические оптимизации однопоточного кода}
 \framesubtitle{Inventing reads}
 
-\begin{lstlisting}
+\begin{minted}[fontsize=\small]{c}
 static int a;
 void foo_1() {
-    int tmp;
-    while (tmp = a) {
+    while(true) {
+        int tmp = a;
+        if (tmp == 0) break;
         do_something_with(tmp);
     }
 }
-\end{lstlisting}
+\end{minted}
 
 \pause
-
 Имеет ли право компилятор сэкономить регистры и переписать функцию следующим образом?
 
-\begin{lstlisting}
+\begin{minted}[fontsize=\small]{c}
 void foo_2() {
-    while (a) {
+    while(true) {
+        if (a == 0) break;
         do_something_with(a);
     }
 }
-\end{lstlisting}
+\end{minted}
 
-\pause
-
-Если в программе существуют другие потоки, изменяющие переменную \texttt{a} -- такое преобразование безопасно?
 \end{frame}
 
 
-\begin{frame}[fragile]{Классические оптимизации однопоточного кода}
+\begin{frame}[t,fragile]{Классические оптимизации однопоточного кода}
 \framesubtitle{Removing reads}
 
-\begin{lstlisting}
+\begin{minted}[fontsize=\small]{c}
 static int a;
 void foo_1() {
-    int tmp;
-    while (tmp = a) {
+    while(true) {
+        int tmp = a;
+        if (tmp == 0) break;
         do_something_with(tmp);
     }
 }
-\end{lstlisting}
+\end{minted}
 
 \pause
 
 Имеет ли право компилятор уменьшить количество загрузок из памяти и переписать функцию следующим образом?
 
-\begin{lstlisting}
+\begin{minted}[fontsize=\small]{c}
 void foo_3() {
     int tmp = a;
-    if (tmp)
-        for (;;) do_something_with(tmp);
+    if (tmp != 0)
+        while(true) { do_something_with(tmp); }
 }
-\end{lstlisting}
-
-\pause
-
-Если в программе существуют другие потоки, изменяющие переменную \texttt{a} -- такое преобразование безопасно?
+\end{minted}
 \end{frame}
 
 
-\begin{frame}[fragile]{Классические оптимизации однопоточного кода}
+
+
+\begin{frame}[t, fragile]{Классические оптимизации однопоточного кода}
 \framesubtitle{Godbolt}
 
-\begin{adjustbox}{width=\textwidth,height=1cm,keepaspectratio}
-\begin{lstlisting}
+
+\begin{tabular}{p{0.4\textwidth} p{0.5\textwidth}}
+
+
+\begin{minted}[fontsize=\small]{c}
 static int a;
 void foo_1() {
-    int tmp;
-    while (tmp = a) {
-        do_something_with(tmp);
-    }
+  while(true) {
+    int tmp = a;
+    if (tmp == 0) break;
+    do_something_with(tmp);
+  }
 }
-\end{lstlisting}
-\end{adjustbox}
+\end{minted}
 
-\texttt{x86-64 clang 16.0.0 -O2}\footnote{\url{https://godbolt.org/z/51W5adoTG}}:
+&
 
-\begin{adjustbox}{width=\textwidth,height=2cm,keepaspectratio}
-\begin{lstlisting}
+\end{tabular}
+\end{frame}
+
+
+\begin{frame}[t, fragile, noframenumbering]{Классические оптимизации однопоточного кода}
+\framesubtitle{Godbolt}
+
+
+\begin{tabular}{p{0.42\textwidth} p{0.5\textwidth}}
+
+
+\begin{minted}[fontsize=\small]{c}
+static int a;
+void foo_1() {
+  while(true) {
+    int tmp = a;
+    if (tmp == 0) break;
+    do_something_with(tmp);
+  }
+}
+\end{minted}
+
+\texttt{x86-64 clang 16.0.0 -O2}\footnote{\tiny\url{https://godbolt.org/z/99j3erzaE}}
+
+\texttt{x86-64 gcc 13.1 -O2}\footnote{\tiny\url{https://godbolt.org/z/fxzGEo1qf}}
+
+&
+
+\begin{minted}[fontsize=\small]{gas}
 foo_1:                                  
-        push    rbx
-        mov     ebx, dword ptr [rip + a]
-        test    ebx, ebx
-        je      .LBB1_2
-.LBB1_1:                           #<---------|    
-        mov     edi, ebx           #          |
-        call    do_something_with  #          |
-        jmp     .LBB1_1            #----------|
+    push    rbx
+    mov     ebx, dword ptr [rip + a]
+    test    ebx, ebx
+    je      .LBB1_2
+.LBB1_1:                       #<-|    
+    mov     edi, ebx           #  |
+    call    do_something_with  #  |
+    jmp     .LBB1_1            #--|
 .LBB1_2:
-        pop     rbx
-        ret
-\end{lstlisting}
-\end{adjustbox}
+    pop     rbx
+    ret
+\end{minted}
 
+\end{tabular}
 \end{frame}
 
 
@@ -125,7 +153,7 @@ foo_1:
 
 \begin{frame}{Вызовы для авторов языков}
 
-Необходимо понять, какие преобразование "подозрительные"\ и включить нужные ремарки в спецификацию языка.
+Необходимо понять, какие преобразования "подозрительные"\ и включить нужные ремарки в спецификацию языка.
 
 \pause
 \begin{itemize}
@@ -134,7 +162,7 @@ foo_1:
 \end{itemize}
 
 \pause
-В примере "removing reads"\ используются довольно простые классические преобразования. Компиляторная классика -- CSE, DCE, UCE, loop-invariant code motion.
+В примере "removing reads"\ используются довольно простые классические преобразования. Не хотелось бы запрещать слишком много оптимизаций.
 
 \pause
 Надо написать некоторую спецификацию того, как различные потоки видят изменения разделяемой памяти (переменных, объектов, полей). 
@@ -147,8 +175,13 @@ foo_1:
 \begin{frame}{Выводы}
 
 \begin{itemize}
+    \pause
     \item Очевидные и верные преобразования однопоточных программ очень часто искажают поведение многопоточного кода, использующего общую память 
-    \item Если язык программирования не готов радикально отказаться от общего изменяемого состояния\footnote{\tiny\url{https://en.wikipedia.org/wiki/Actor_model}}\textsuperscript{,}\footnote{\tiny\url{https://en.wikipedia.org/wiki/Communicating_sequential_processes}} или попытался, но не смог\footnote{\tiny\url{https://kotlinlang.org/docs/multiplatform-mobile-concurrency-overview.html#global-state}}, то необходимо определить "границы дозволенного"\ для оптимизаций и не очень сильно удивлять пользователей языка
+
+    \pause
+    \item Если язык программирования не готов радикально отказаться от общего изменяемого состояния\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/Actor_model}}\textsuperscript{,}\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/Communicating_sequential_processes}} или попытался, но не смог\footnote<3->{\tiny\url{https://kotlinlang.org/docs/multiplatform-mobile-concurrency-overview.html#global-state}}, то необходимо определить "границы дозволенного"\ для оптимизаций и не очень сильно удивлять пользователей языка
+
+    \pause
     \item Language memory model -- описание того, какие есть гарантии у различных потоков приложения при обращении к разделяемым ячейкам памяти (переменным, объектам, полям, элементам массивов ...)
 \end{itemize}
 
