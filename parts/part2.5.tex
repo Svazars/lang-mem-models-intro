@@ -1,0 +1,486 @@
+
+\section{Программист хочет как лучше...}
+\showTOC
+
+\begin{frame}[t]{Проблема №1}
+
+Компилятор, в погоне за производительностью, начинает "фантазировать":
+\begin{itemize}
+	\pause
+	\item Добавлять операции, которых не было в исходной программе
+
+	\pause
+	\item Удалять написанные в исходном тексте операции
+
+	\pause
+	\item Изменять порядок операций
+\end{itemize}
+
+\pause
+Программисту хотелось бы \only<5>{явно сказать "делай в точности как написано"}\only<6->{иметь языковые средства, позволяющие контролировать происходящее}.
+\pause
+
+\end{frame}
+
+\begin{frame}[t, fragile]{Compiler barriers}
+
+\vspace{-0.5cm}
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+\begin{minted}[fontsize=\small]{c}
+int x, y;
+void foo() {
+      x = 1;
+      y = 2;
+      x = 3;
+}
+\end{minted}
+&
+\end{tabular}
+
+\vspace{-0.5cm}
+
+\pause
+
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+
+\begin{minted}[fontsize=\small]{gas}
+foo1:
+    mov [y], 2
+    mov [x], 3
+    ret
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{gas}
+foo2:
+    mov [x], 1
+    mov [y], 2
+    mov [x], 3
+    ret
+\end{minted}
+
+\end{tabular}
+
+\pause
+Современный оптимизирующий компилятор выберет вариант слева\footnote<3->{\tiny\url{https://godbolt.org/z/r6sMzrj6K}}.
+
+\pause
+Но можно ему сказать -- "вот эта точка в программе -- барьер, она запрещает двигать операции через него".
+
+\end{frame}
+
+
+\begin{frame}[t, fragile]{Compiler barriers}
+
+\vspace{-0.5cm}
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+\begin{minted}[fontsize=\small]{c}
+int x, y;
+void foo1() {
+      x = 1;
+      y = 2;
+      x = 3;
+}
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{c}
+int x, y;
+void foo2() {
+      x = 1;
+      barrier();
+      y = 2;
+      x = 3;
+}
+\end{minted}
+\end{tabular}
+
+\pause
+\vspace{-0.5cm}
+
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+
+\begin{minted}[fontsize=\small]{gas}
+foo1:
+    mov [y], 2
+    mov [x], 3
+    ret
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{gas}
+foo2:
+    mov [x], 1
+    mov [y], 2
+    mov [x], 3
+    ret
+\end{minted}
+\end{tabular}
+
+\pause
+Обратите внимание, что это ОЧЕНЬ низкоуровневый механизм и при написании современного C/C++ кода его использовать не следует\footnote<3->{\tiny\url{https://preshing.com/20120625/memory-ordering-at-compile-time/}}.
+
+\end{frame}
+
+
+\begin{frame}{Проблема №2}
+Процессор, в погоне за производительностью, начинает "чудить":
+\begin{itemize}
+	\pause
+	\item С разной скоростью передавать информацию другим процессорам 
+
+	\pause
+	\item Изменять порядок операций
+\end{itemize}
+
+\pause
+Программисту хотелось бы иметь языковые средства, позволяющие контролировать происходящее.
+
+\pause
+В многоядерном процессоре предусмотрены специальные инструкции, которые позволяют установить порядок "видимости"\ среди операций чтения и записи\footnote<5->{\tiny\url{https://en.wikipedia.org/wiki/Memory_barrier}}.
+
+\end{frame}
+
+\begin{frame}[fragile]{Memory barriers}
+\framesubtitle{Пример}
+
+\vspace{-0.5cm}
+
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+\begin{minted}[fontsize=\small]{gas}
+# thread A
+MOV [x] ,  1  # (A.1)
+MOV EAX , [y] # (A.2)
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{gas}
+# thread B          
+MOV [y] , 1  # (B.1) 
+MOV EBX, [x] # (B.2) 
+\end{minted}
+\end{tabular}
+
+Допустимые результаты: 
+\pause 
+\texttt{(0, 0) (1, 0) (0, 1) (1, 1)}
+
+\pause
+\vspace{-0.25cm}
+
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+\begin{minted}[fontsize=\small]{gas}
+# thread A
+MOV [x] ,  1  # (A.1)
+MFENCE
+MOV EAX , [y] # (A.2)
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{gas}
+# thread B          
+MOV [y] , 1  # (B.1) 
+MFENCE
+MOV EBX, [x] # (B.2) 
+\end{minted}
+\end{tabular}
+
+\pause
+Инструкция \texttt{mfence} отменяет переупорядочивание операций с памятью на уровне процессора\footnote<4->{\tiny\url{https://www.felixcloutier.com/x86/mfence.html}}.
+
+\pause
+
+Допустимые результаты: \pause \texttt{(1, 0) (0, 1) (1, 1)}
+\end{frame}
+
+
+\begin{frame}{Memory barriers}
+\framesubtitle{Предостережение}
+
+Не забывайте
+\begin{itemize}
+  \pause
+  \item Барьеры дорогие
+
+  \pause
+  \item Инструкции обладают процессорно-специфичной и иногда весьма запутанной семантикой
+
+  \pause
+  \item Расстановка барьеров в ряде многопоточных алгоритмов -- не единственная и, по сути, является смесью искусства и инженерного мастерства
+
+  \pause
+  \item Практически все, кто так делает, похожи на глотателей огня. Даже если живы, то со шрамами от ожогов\footnote<5->{\tiny\url{https://www.researchgate.net/publication/228824849_Memory_Barriers_a_Hardware_View_for_Software_Hackers}}.
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[t]{Языковые средства}
+\framesubtitle{Вопросы взаимного влияния}
+
+Краткая выжимка из предыдущих слайдов. Для "починки"\ многопоточных алгоритмов бывает необходимо:
+\begin{itemize}
+  \item запрещать компилятору "фантазировать"
+  \item запрещать процессору "чудить"
+\end{itemize}
+
+\pause
+Например, с помощью барьеров разного вида. 
+
+\pause
+Кажется, что компиляторные и процессорные барьеры -- это разные сущности и, наверное, независимые друг от друга. 
+
+\pause
+Однако, кажется логичным, чтобы компилятор уважал процессорные барьеры.
+
+\pause
+А наоборот?
+\end{frame}
+
+\begin{frame}[t]{Языковые средства}
+\framesubtitle{Два мира}
+
+Краткая выжимка из предыдущих слайдов. Для "починки"\ многопоточных алгоритмов бывает необходимо:
+\begin{itemize}
+  \item запрещать компилятору "фантазировать"
+  \item запрещать процессору "чудить"
+\end{itemize}
+
+Нужен ли программисту независимый контроль над обеими проблемами, с учетом того, что допустить ошибку невероятно легко, а негативные последствия практически невозможно отладить?
+
+\pause
+Существуют разные подходы:
+\begin{itemize}
+  
+  \pause
+  \item Языки, с маниакальной страстью пытающиеся дать разработчикам способы написать очень быструю, но некорректную программу.
+  \pause
+  C/C++
+
+  \pause
+  \item Языки, сфокусированные на безопасности и с помощью управляемой среды создающие "песочницу".
+  \pause
+  Java
+\end{itemize}
+\end{frame}
+
+
+\begin{frame}[t,noframenumbering]{Языковые средства}
+\framesubtitle{Два мира}
+
+Краткая выжимка из предыдущих слайдов. Для "починки"\ многопоточных алгоритмов бывает необходимо:
+\begin{itemize}
+  \item запрещать компилятору "фантазировать"
+  \item запрещать процессору "чудить"
+\end{itemize}
+
+Нужен ли программисту независимый контроль над обеими проблемами, с учетом того, что допустить ошибку невероятно легко, а негативные последствия практически невозможно отладить?
+
+Существуют разные подходы:
+\begin{itemize}
+  
+  \item Языки,\only<1-2>{ с маниакальной страстью пытающиеся дать разработчикам способы написать очень быструю, но некорректную программу}\only<3>{ \sout{с маниакальной страстью пытающиеся дать разработчикам способы написать очень быструю, но некорректную программу}}\only<4->{ {\color{red}предоставляющие разработчикам документированное и низкоуровневое API для написания очень быстрых программ}}.
+  C/C++
+
+  \item Языки, сфокусированные на безопасности и с помощью управляемой среды\only<1>{ \sout{создающие}}\only<2->{ {\color{red}пытающиеся создать}} "песочницу".
+  Java
+\end{itemize}
+
+\end{frame}
+
+
+\begin{frame}[fragile, t]{Разные миры}
+\framesubtitle{Пример}
+
+
+
+\begin{minted}[fontsize=\small]{c}
+static volatile int x, y;
+\end{minted}
+
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+
+\begin{minted}[fontsize=\small]{c}
+void threadA() {
+      x = 1;
+  int a = y;
+}
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{c}
+void threadB() {                                   
+        y = 1;                           
+    int b = x;                           
+}                    
+\end{minted}
+\end{tabular}
+
+\pause
+\vspace{-0.5cm}
+C\footnote<2->{\tiny\url{https://godbolt.org/z/q4raxqrTe}}:
+
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+\begin{minted}[fontsize=\small]{gas}
+MOV [x] ,  1  # (A.1)
+MOV EAX , [y] # (A.2)
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{gas}
+MOV [y] , 1  # (B.1) 
+MOV EBX, [x] # (B.2) 
+\end{minted}
+\end{tabular}
+
+\pause
+Допустимые результаты: \texttt{(0, 0) (1, 0) (0, 1) (1, 1)}
+\end{frame}
+
+\begin{frame}[fragile, t, noframenumbering]{Разные миры}
+\framesubtitle{Пример}
+
+\begin{minted}[fontsize=\small]{c}
+static volatile int x, y; 
+\end{minted}
+
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+
+\begin{minted}[fontsize=\small]{c}
+void threadA() {
+      x = 1;
+  int a = y;
+}
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{c}
+void threadB() {                                   
+        y = 1;                           
+    int b = x;                           
+}                    
+\end{minted}
+\end{tabular}
+
+\vspace{-0.5cm}
+Java\footnote{\tiny\url{https://github.com/Svazars/lang-mem-models-intro/tree/main/samples/java}}:
+
+
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+\begin{minted}[fontsize=\small]{gas}
+MOV [x] ,  1         # (A.1)
+lock add [rsp], 0x0  # (A.2)
+MOV EAX , [y]        # (A.3)
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{gas}
+MOV [y] , 1         # (B.1) 
+lock add [rsp], 0x0 # (B.2)
+MOV EBX, [x]        # (B.3) 
+\end{minted}
+\end{tabular}
+
+\pause
+\vspace{-0.5cm}
+\texttt{lock add [rsp], 0x0} $\approx$ \texttt{mfence} $\approx$ full memory barrier\footnote<2->{\tiny\url{https://shipilev.net/blog/2014/on-the-fence-with-dependencies/}}
+
+\pause
+Допустимые результаты: \texttt{(1, 0) (0, 1) (1, 1)}
+
+\end{frame}
+
+
+\begin{frame}[fragile, t, noframenumbering]{Разные миры}
+\framesubtitle{Пример}
+
+\begin{minted}[fontsize=\small]{c}
+static volatile int x, y; 
+\end{minted}
+
+\begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
+\begin{minted}[fontsize=\small]{c}
+void threadA() {
+      x = 1;
+  int a = y;
+}
+\end{minted}
+
+& 
+
+\begin{minted}[fontsize=\small]{c}
+void threadB() {                                   
+        y = 1;                           
+    int b = x;                           
+}                    
+\end{minted}
+\end{tabular}
+
+Допустимые результаты в C: \texttt{(0, 0) (1, 0) (0, 1) (1, 1)}
+
+Допустимые результаты в Java: \texttt{(1, 0) (0, 1) (1, 1)}
+
+\pause
+Обычно пишут, что \texttt{volatile} в языке Си ограничивает только преобразования на уровне компилятора, а в языке Java -- ограничивает как компилятор, так процессор.
+
+\pause
+Но давать слишком простую модель реального мира -- плохо с педагогической точки зрения.
+
+\pause
+Поэтому защищу себя от гнева ваших будущих работодателей.
+
+\end{frame}
+
+
+\begin{frame}{Совет от мудрой совы}
+
+В языке С вместо \texttt{volatile} \textbf{всегда} используйте типы из \texttt{stdatomic.h}\footnote{\tiny\url{https://en.cppreference.com/w/c/language/atomic}} для разделяемых переменных.
+Если стандарт C11 не поддерживается используемым компилятором или в коде обычные переменные изменяются из разных потоков одновременно -- бегите\footnote{\tiny\url{https://www.kernel.org/doc/Documentation/process/volatile-considered-harmful.rst}}.
+
+\pause
+
+Для любителей почитать как ругается Линус Торвальдс, советую обратить внимание на цепочку обсуждений "volatile considered evil"\footnote<2->{\tiny\url{https://lkml.org/lkml/2006/7/6/159}}:
+
+\begin{quote}
+ "volatile"\ really \_is\_ misdesigned. The semantics of it are so unclear as to be totally useless. The only thing "volatile"\ can ever do is generate worse code, WITH NO UPSIDES.
+\end{quote}
+
+\end{frame}
+
+
+\begin{frame}[fragile]{Языковые средства написания работающих многопоточных программ}
+\framesubtitle{Выводы}
+
+\begin{itemize}
+
+ \pause
+ \item Пожалуйста, никогда и никому не говорите что \texttt{volatile} в С и в Java имеют один и тот же смысл
+ 
+ \pause
+ \item Не думайте, что бездумное добавление \textt{volatile} в вашу программу сделает её корректной (даже на Java это не так)
+ 
+ \pause
+ \item Всегда помните, что в разных языках "одинаковая"\ конструкция может иметь весьма разный смысл
+ \begin{itemize}
+    \item смена языкового стека
+    \item адаптация алгоритма из библиотеки/публикации
+    \item кросс-языковая трансляция
+ \end{itemize}
+
+ \pause
+ \item Компиляторные и процессорные барьеры -- прямолинейный способ добиться желаемого при написании многопоточных программ
+
+ \pause
+ \item Барьерный подход несет с собой много неявной сложности и специфики (языка, компилятора, процессора)
+\end{itemize}
+
+\end{frame}
+
