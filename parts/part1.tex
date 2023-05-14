@@ -9,11 +9,11 @@
 \begin{minted}[fontsize=\small]{c}
 static int a;
 void foo_1() {
-    while(true) {
-        int tmp = a;
-        if (tmp == 0) break;
-        do_something_with(tmp);
-    }
+  while(true) {
+    int tmp = a;
+    if (tmp == 0) break;
+    do_something_with(tmp);
+  }
 }
 \end{minted}
 
@@ -22,10 +22,10 @@ void foo_1() {
 
 \begin{minted}[fontsize=\small]{c}
 void foo_2() {
-    while(true) {
-        if (a == 0) break;
-        do_something_with(a);
-    }
+  while(true) {
+    if (a == 0) break;
+    do_something_with(a);
+  }
 }
 \end{minted}
 
@@ -38,11 +38,11 @@ void foo_2() {
 \begin{minted}[fontsize=\small]{c}
 static int a;
 void foo_1() {
-    while(true) {
-        int tmp = a;
-        if (tmp == 0) break;
-        do_something_with(tmp);
-    }
+  while(true) {
+    int tmp = a;
+    if (tmp == 0) break;
+    do_something_with(tmp);
+  }
 }
 \end{minted}
 
@@ -52,9 +52,9 @@ void foo_1() {
 
 \begin{minted}[fontsize=\small]{c}
 void foo_3() {
-    int tmp = a;
-    if (tmp != 0)
-        while(true) { do_something_with(tmp); }
+  int tmp = a;
+  if (tmp != 0)
+    while(true) { do_something_with(tmp); }
 }
 \end{minted}
 \end{frame}
@@ -175,7 +175,6 @@ foo_1:
 \begin{frame}{Выводы}
 
 \begin{itemize}
-    \pause
     \item Очевидные и верные преобразования однопоточных программ очень часто искажают поведение многопоточного кода, использующего общую память 
 
     \pause

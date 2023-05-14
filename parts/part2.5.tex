@@ -443,11 +443,14 @@ void threadB() {
 \begin{frame}{Совет от мудрой совы}
 
 В языке С вместо \texttt{volatile} \textbf{всегда} используйте типы из \texttt{stdatomic.h}\footnote{\tiny\url{https://en.cppreference.com/w/c/language/atomic}} для разделяемых переменных.
-Если стандарт C11 не поддерживается используемым компилятором или в коде обычные переменные изменяются из разных потоков одновременно -- бегите\footnote{\tiny\url{https://www.kernel.org/doc/Documentation/process/volatile-considered-harmful.rst}}.
 
 \pause
 
-Для любителей почитать как ругается Линус Торвальдс, советую обратить внимание на цепочку обсуждений "volatile considered evil"\footnote<2->{\tiny\url{https://lkml.org/lkml/2006/7/6/159}}:
+Если стандарт C11 не поддерживается используемым компилятором или в коде обычные переменные изменяются из разных потоков одновременно -- бегите\footnote<2->{\tiny\url{https://www.kernel.org/doc/Documentation/process/volatile-considered-harmful.rst}}.
+
+\pause
+
+Для любителей почитать как ругается Линус Торвальдс, советую обратить внимание на цепочку обсуждений "volatile considered evil"\footnote<3->{\tiny\url{https://lkml.org/lkml/2006/7/6/159}}:
 
 \begin{quote}
  "volatile"\ really \_is\_ misdesigned. The semantics of it are so unclear as to be totally useless. The only thing "volatile"\ can ever do is generate worse code, WITH NO UPSIDES.
