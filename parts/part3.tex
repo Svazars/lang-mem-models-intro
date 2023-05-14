@@ -54,11 +54,23 @@ Intel® 64 and IA-32 Architectures Software Developer’s Manual:
 
 \begin{itemize}
     \item  Как писать такой документ? Литературным английским? В виде алгоритма? В виде набора разрешающих правил? В виде набора запрещающих правил? 
+
+    \pause
     \item  Должна ли спецификация меняться от версии к версии? 
+
+    \pause
     \item  Лучше чтобы она была более строгой или более слабой? 
+
+    \pause
     \item  Можно ли проверить что придуманные правила согласованы между собой?   
+
+    \pause
     \item  Можно ли гарантировать, что любая программа будет адекватно и однозначно описываться придуманной моделью?
+
+    \pause
     \item  Существует ли какой-то специальный математический аппарат, облегчающий написание спецификации?
+
+    \pause
     \item  А пользователи языка должны смочь это прочитать? Понять? Применить на практике?
 \end{itemize}
 
@@ -122,8 +134,120 @@ Intel® 64 and IA-32 Architectures Software Developer’s Manual:
 \end{frame}
 
 
+\begin{frame}[fragile, t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Нет человека -- нет проблемы}
 
-% Соблюсти баланс между \textit{понятностью}, \textit{производительностью} и \textit{устойчивостью}
+Если в программе нет data race -- то нет необходимости говорить о модели памяти для многопоточных сред.
+
+\pause
+
+Поэтому можно использовать \textit{правильные} подходы к программированию:
+\begin{itemize}
+	\pause
+	\item Неизменяемые структуры данных
+
+	\pause
+	\item Декларативное описание вычислений
+\end{itemize}
+
+\pause
+Clojure
+
+\pause
+Haskell
+
+\pause
+\begin{quote}
+All told, a monad in X is just a monoid in the category of endofunctors of X, with product × replaced by composition of endofunctors and unit set by the identity endofunctor.
+\end{quote}
+
+\pause
+Дело в языке или в технике программирования?
+
+\end{frame}
+
+
+\begin{frame}[fragile, t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Immutability}
+
+Если структура данных неизменяема -- то 
+
+\begin{itemize}
+	\pause
+	\item разные потоки могут одновременно наблюдать её (читать из разделяемых ячеек памяти)
+
+	\pause
+	\item невозможны конфликтующие операции	
+\end{itemize}
+
+\pause
+Невероятно удобно!
+
+\pause
+Но есть нюанс...
+
+\pause
+А как обновлять такую структуру данных в связи с изменением внешних условий?
+
+\pause
+Создать новый неизменяемый экземпляр, который содержит самую актуальную информацию.
+
+\pause
+Возникают определенные трудности:
+\begin{itemize}
+	\pause
+	\item Издержки на пересоздание крупных структур
+
+	\pause
+	\item Операция публикации -- это же, все-таки, операция записи, не так ли? 
+\end{itemize}
+\end{frame}
+
+\begin{frame}[fragile, t]{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Declarative DSL}
+
+Описать требуемый результат, а система сама разберется, как воспользоваться параллелизмом при организации вычислений:
+
+\pause
+\begin{itemize}
+	\item OpenMP {\tiny\url{https://www.openmp.org/}}
+	\item Intel TBB {\tiny\url{https://github.com/oneapi-src/oneTBB}}
+	\item MPI {\tiny\url{https://www.open-mpi.org/}}
+	\item Java parallel streams {\tiny\url{https://docs.oracle.com/javase/tutorial/collections/streams/parallelism.html}}
+	\item MapReduce {\tiny\url{https://research.google/pubs/pub62/}}
+	\item Resilient Distributed Datasets {\tiny\url{https://dl.acm.org/doi/10.5555/2228298.2228301}}
+\end{itemize}
+
+\pause
+Абстракции текут\footnote<3->{\tiny\url{https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/}} и в большинстве случаев вносят издержки.
+
+\pause
+При реализации таких DSL неизбежно нужно записывать значения в разделяемые ячейки памяти, не так ли?
+\end{frame}
+
+
+\begin{frame}{Существующие подходы к описанию моделей памяти}
+\framesubtitle{Альтернативные подходы}
+
+Модель программирования без (явного) разделяемого состояния.
+\pause
+\begin{itemize}
+	\item Communicating sequential processes
+	\item Actor model
+\end{itemize}
+
+\pause
+Все вычислительные агенты (легковесные процессы) независимы друг от друга и обмениваются неизменяемыми сообщениями.
+
+\pause
+\begin{itemize}
+	\item Erlang\footnote<4->{\tiny\url{https://www.erlang.org/}}
+	\item Akka actors\footnote<4->{\tiny\url{https://doc.akka.io/docs/akka/current/typed/actors.html#akka-actors}}
+\end{itemize}
+
+\pause
+Код реализации таких систем (Erlang VM, Akka internals) использует разделяемые ячейки памяти, чтобы передавать информацию от одного агента к другому, не так ли?
+\end{frame}
 
 
 \begin{frame}[fragile, t]{Существующие подходы к описанию моделей памяти}
@@ -149,14 +273,16 @@ Concurrent write/write access to the same location remains illegal behavior, unl
 }
 
 \begin{onlyenv}<4->
-\begin{lstlisting}
+%\begin{lstlisting}
+\begin{minted}[fontsize=\small]{swift}
 import Foundation
 class Bird {}
 var S = Bird()
 let q = DispatchQueue.global(qos: .default)
 q.async { while(true) { S = Bird() } }
 while(true) { S = Bird() }
-\end{lstlisting}
+\end{minted}
+%\end{lstlisting}
 \end{onlyenv}
 
 \only<5->{
@@ -290,7 +416,6 @@ ECMA-335, \textt{CLI}: \texttt{I.12.6 Memory model and optimizations} (4)
 
 Насколько полон список "запретных"\ оптимизаций, как будет система эволюционировать в будущем, будут ли еще отступления от стандарта не раскрыто.
 
-Microsoft style\footnote{\url{https://ru.wikipedia.org/wiki/Embrace,_Extend,_and_Extinguish}}
 \end{frame}
 
 
@@ -379,7 +504,7 @@ void thread1() {      |    void thread2() {
 Попытка переделать модель языка пока не увенчалась успехом\footnote<5->{\tiny\url{https://peps.python.org/pep-0583/}}.
 
 \pause
-Просто так выбросить GIL мешает не столько великодушный пожизненный диктатор\footnote<6->{\tiny\url{https://www.artima.com/weblogs/viewpost.jsp?thread=235725}}, сколько нежелание замедлять скриптовый язык еще на 10-20-30\%, ломая интероп с нативными библиотеками\footnote<6->{\tiny\url{https://peps.python.org/pep-0703/}}.
+Просто так выбросить GIL мешает нежелание замедлять скриптовый язык еще на 10-20-30\%, ломая интероп с нативными библиотеками\footnote<6->{\tiny\url{https://peps.python.org/pep-0703/}}.
 \end{frame}
 
 
@@ -519,33 +644,6 @@ LLVM sanitizers\footnote{\tiny\url{https://github.com/google/sanitizers}}
 
 
 \begin{frame}{Существующие подходы к описанию моделей памяти}
-\framesubtitle{Альтернативные подходы}
-
-Модель программирования без (явного) разделяемого состояния.
-\pause
-\begin{itemize}
-	\item Communicating sequential processes
-	\item Actor model
-\end{itemize}
-
-\pause
-Декларативный DSL для организации вычислений.
-\pause
-\begin{itemize}
-	\item OpenMP {\tiny\url{https://www.openmp.org/}}
-	\item Intel TBB {\tiny\url{https://github.com/oneapi-src/oneTBB}}
-	\item MPI {\tiny\url{https://www.open-mpi.org/}}
-	\item Java parallel streams {\tiny\url{https://docs.oracle.com/javase/tutorial/collections/streams/parallelism.html}}
-	\item MapReduce {\tiny\url{https://research.google/pubs/pub62/}}
-	\item Resilient Distributed Datasets {\tiny\url{https://dl.acm.org/doi/10.5555/2228298.2228301}}
-\end{itemize}
-
-\pause
-Абстракции текут\footnote<5->{\tiny\url{https://www.joelonsoftware.com/2002/11/11/the-law-of-leaky-abstractions/}} и в большинстве случаев вносят издержки.
-
-\end{frame}
-
-\begin{frame}{Существующие подходы к описанию моделей памяти}
 \framesubtitle{Продвинутые подходы: исчерпывающая модель памяти}
 
 \pause
@@ -600,7 +698,7 @@ Java language specification: \url{https://docs.oracle.com/javase/specs/}
 Это поможет нам рассуждать о том, что было "раньше"\ либо "позже".
 
 
-Попытки рассказать просто о сложном от Алексея Шипилева\footnote{\tinyДля любителей выбирать между слайдами, конспектом и видео: \url{https://shipilev.net}}: \url{https://shipilev.net/talks/geecon-May2018-jmm.pdf}. Докладчик прорекламирует сам себя на слайде "Further Reading".
+Попытки рассказать просто о сложном от Алексея Шипилева\footnote{\tinyДля любителей выбирать между слайдами, конспектом и видео: \url{https://shipilev.net}}: \url{https://shipilev.net/talks/geecon-May2018-jmm.pdf}. Обратите внимание на слайд "Further Reading".
 
 \end{frame}
 
@@ -697,7 +795,7 @@ This is one of the many reasons we need to overhaul JMM someday.
 С одной стороны, это развязывает руки писателям спецификации -- не нужно описывать все-все краевые случаи (жизненно важно для управляемого безопасного языка).
 
 \pause
-С другой стороны, инструментов для контроля всего и вся в языке гораздо больше (volatile, atomics, inline assembly, pthreads ...).   
+С другой стороны, инструментов для контроля всего и вся в языке гораздо больше (volatile, atomics, inline assembly, std::thread ...).   
 
 \pause
 Мне сложно кратко и по существу рассказать про такой монументальный артефакт человеческого труда как "C++11"\ , поэтому просто посоветую почитать заметку от
@@ -858,8 +956,13 @@ Hardware and Software transactional memory\footnote<3->{\tiny\url{https://en.wik
 
 Вместо чтения фундаментальных трудов по многопоточному программированию, слабым моделям памяти и спецификациям процессоров, достаточно
 \begin{itemize}
+	\pause
 	\item выбрать \textit{правильный} язык программирования
+
+	\pause
 	\item прочитать короткий сборник советов о том, как пользоваться \texttt{java.util.concurrent}
+
+	\pause
 	\item освоить пару распространенных Java-специфичных шаблонов написания потокобезопасного кода 
 \end{itemize}
 
