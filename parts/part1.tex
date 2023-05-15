@@ -178,7 +178,7 @@ foo_1:
     \item Очевидные и верные преобразования однопоточных программ очень часто искажают поведение многопоточного кода, использующего общую память 
 
     \pause
-    \item Если язык программирования не готов радикально отказаться от общего изменяемого состояния\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/Actor_model}}\textsuperscript{,}\footnote<3->{\tiny\url{https://en.wikipedia.org/wiki/Communicating_sequential_processes}} или попытался, но не смог\footnote<3->{\tiny\url{https://kotlinlang.org/docs/multiplatform-mobile-concurrency-overview.html#global-state}}, то необходимо определить "границы дозволенного"\ для оптимизаций и не очень сильно удивлять пользователей языка
+    \item Если язык программирования не готов радикально отказаться от общего изменяемого состояния\footnote<2->{\tiny\url{https://en.wikipedia.org/wiki/Actor_model}}\textsuperscript{,}\footnote<2->{\tiny\url{https://en.wikipedia.org/wiki/Communicating_sequential_processes}} или попытался, но не смог\footnote<2->{\tiny\url{https://kotlinlang.org/docs/multiplatform-mobile-concurrency-overview.html#global-state}}, то необходимо определить "границы дозволенного"\ для оптимизаций и не очень сильно удивлять пользователей языка
 
     \pause
     \item Language memory model -- описание того, какие есть гарантии у различных потоков приложения при обращении к разделяемым ячейкам памяти (переменным, объектам, полям, элементам массивов ...)

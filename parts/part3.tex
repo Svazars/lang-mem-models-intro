@@ -390,34 +390,7 @@ ECMA-335, \textt{CLI}: \texttt{I.12.6 Memory model and optimizations} (4)
 
 \pause
 Насколько полон список "запретных"\ оптимизаций, как будет система эволюционировать в будущем, будут ли еще отступления от стандарта не раскрыто.
-
 \end{frame}
-
-\begin{frame}[t,noframenumbering]{Существующие подходы к описанию моделей памяти}
-\framesubtitle{Наивные подходы: reference implementation is a specification}
-
-{\small
-ECMA-334, \texttt{C\# language specification}: \texttt{14.5.4 Volatile fields} (2)
-}
-
-{\small
-ECMA-335, \textt{CLI}: \texttt{I.12.6 Memory model and optimizations} (4)
-}
-
-Модель памяти также описана для .NET, официально несовместима с предыдущими документами.
-
-Модель памяти также описана для Mono, который старается сохранять конформность с .NET.
-
-Общий подход спецификации:
-\begin{itemize}
-	\item Использовать термины, не давая строгие определения.
-	\item Явно запретить некоторые перестановки операций с памятью.
-\end{itemize}
-
-Насколько полон список "запретных"\ оптимизаций, как будет система эволюционировать в будущем, будут ли еще отступления от стандарта не раскрыто.
-
-\end{frame}
-
 
 \begin{frame}[fragile, t]{Существующие подходы к описанию моделей памяти}
 \framesubtitle{Наивные подходы: strict consistency}
