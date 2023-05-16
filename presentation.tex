@@ -153,29 +153,20 @@
 Уже 8 лет как JVM-инженер\footnote{\tiny Иван Углянский, Один день из жизни JVM-инженера, \url{https://habr.com/ru/company/jugru/blog/719614/}}
 
 \begin{itemize}
-    \pause
-    \item 2015 - 2019, Excelsior JVM with AOT compilation\footnote<2->{\tiny\url{https://habr.com/ru/company/jugru/blog/437180/}}
-
-    \pause
-    \item 2019 - now, Huawei, Languages and Compilers lab\footnote<3->{\tiny\url{http://rnew.tilda.ws/excelsiorathuawei}}
+    \item 2015 - 2019, Excelsior JVM with AOT compilation\footnote{\tiny\url{https://habr.com/ru/company/jugru/blog/437180/}}
+    \item 2019 - now, Huawei, Languages and Compilers lab\footnote{\tiny\url{http://rnew.tilda.ws/excelsiorathuawei}}
 \end{itemize}
 
-\pause
 Специализация -- рантайм JVM
 
-\pause
 Узкая специализация -- сборщики мусора
 
 \pause
 Область интересов: 
 \begin{itemize}
-    \pause
     \item многопоточность
-    \pause
     \item слабые модели памяти
-    \pause
     \item корректность многопоточных структур данных
-    \pause
     \item автоматическое управление памятью
 \end{itemize}
 \end{frame}
@@ -184,15 +175,11 @@
 \begin{frame}{Мое персональное когнитивное искажение}
 Я много страдал, отлаживая:
 \begin{itemize}
-    \pause
     \item баги компилятора
-    \pause
     \item своего параллельного кода
-    \pause
     \item чужих реализаций многопоточных структур данных
 \end{itemize}
 
-\pause
 Очень хочу поручить это дело бездушной машине. Потому питаю слабость к формализмам и математической нотации.
 
 \end{frame}
@@ -200,20 +187,28 @@
 
 \begin{frame}{Disclaimer}
 
-\pause
 Лекция называется "пара слов про ..."\ и будет идти 1.5 часа.
 
 \pause
-В последующих слайдах будет много упрощений и далеко не вся важная информация будет рассказана.
+\begin{itemize}
+    \item В последующих слайдах будет много упрощений и далеко не вся важная информация будет рассказана.
+
+    \item Лекция носит ознакомительно-развлекательный характер.
+
+    \item По ходу дела мы больше углубимся в теорию и разные философские вопросы. Практикам рекомендую посмотреть интересный доклад про биржи, котировки и их обработку на Java\footnote<2->{{\tiny Роман Елизаров "Миллионы котировок в секунду на чистой Java"\ \url{https://youtu.be/j3wFOmRmSeg}}}.
+\end{itemize}
 
 \pause
-Лекция носит ознакомительно-развлекательный характер.
-
-\pause
-По ходу дела мы больше углубимся в теорию и разные философские вопросы. Если вам хочется знать, почему это небесполезно на практике, то рекомендую посмотреть интересный доклад про биржи, котировки и их обработку на Java\footnote<5->{{\tiny Роман Елизаров "Миллионы котировок в секунду на чистой Java"\ \url{https://youtu.be/j3wFOmRmSeg}}}.
-
-\pause
-Смотрите ссылки, читайте книги, задавайте вопросы, обязательно ходите на продвинутые курсы по параллелизму, многопоточности, распределенным системам, верификации программ в нашем университете и лучших ВУЗах мира\footnote<6->{\tinyСпасибо youtube, coursera и аналогам за такую возможность}.
+Вы узнаете:
+\begin{itemize}
+    \item Что такое модели памяти
+    \begin{itemize}
+        \item Процессорных архитектур
+        \item Языков программирования
+    \end{itemize}
+    \item Зачем они нужны
+    \item Как они выглядят в дикой природе 
+\end{itemize}
 
 \end{frame}
 

@@ -113,7 +113,7 @@ void foo_1() {
 \begin{minted}[fontsize=\small]{gas}
 foo_1:                                  
     push    rbx
-    mov     ebx, dword ptr [rip + a]
+    mov     ebx, [a]
     test    ebx, ebx
     je      .LBB1_2
 .LBB1_1:                       #<-|    

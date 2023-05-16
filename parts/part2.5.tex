@@ -8,16 +8,12 @@
 \begin{itemize}
 	\pause
 	\item Добавлять операции, которых не было в исходной программе
-
-	\pause
 	\item Удалять написанные в исходном тексте операции
-
-	\pause
 	\item Изменять порядок операций
 \end{itemize}
 
 \pause
-Программисту хотелось бы \only<5>{явно сказать "делай в точности как написано"}\only<6->{иметь языковые средства, позволяющие контролировать происходящее}.
+Программисту хотелось бы \only<3>{явно сказать "делай в точности как написано"}\only<4->{иметь языковые средства, позволяющие контролировать происходящее}.
 \pause
 
 \end{frame}
@@ -131,8 +127,6 @@ foo2:
 \begin{itemize}
 	\pause
 	\item С разной скоростью передавать информацию другим процессорам 
-
-	\pause
 	\item Изменять порядок операций
 \end{itemize}
 
@@ -140,7 +134,7 @@ foo2:
 Программисту хотелось бы иметь языковые средства, позволяющие контролировать происходящее.
 
 \pause
-В многоядерном процессоре предусмотрены специальные инструкции, которые позволяют установить порядок "видимости"\ среди операций чтения и записи\footnote<5->{\tiny\url{https://en.wikipedia.org/wiki/Memory_barrier}}.
+В многоядерном процессоре предусмотрены специальные инструкции, которые позволяют установить порядок "видимости"\ среди операций чтения и записи\footnote<4->{\tiny\url{https://en.wikipedia.org/wiki/Memory_barrier}}.
 
 \end{frame}
 
@@ -152,16 +146,16 @@ foo2:
 \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[fontsize=\small]{gas}
 # thread A
-MOV [x] ,  1  # (A.1)
-MOV EAX , [y] # (A.2)
+mov [x] ,  1
+mov EAX , [y]
 \end{minted}
 
 & 
 
 \begin{minted}[fontsize=\small]{gas}
 # thread B          
-MOV [y] , 1  # (B.1) 
-MOV EBX, [x] # (B.2) 
+mov [y] , 1
+mov EBX, [x]
 \end{minted}
 \end{tabular}
 
@@ -175,24 +169,24 @@ MOV EBX, [x] # (B.2)
 \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[fontsize=\small]{gas}
 # thread A
-MOV [x] ,  1  # (A.1)
-MFENCE
-MOV EAX , [y] # (A.2)
+mov [x] ,  1
+mfence      
+mov EAX , [y]
 \end{minted}
 
 & 
 
 \begin{minted}[fontsize=\small]{gas}
 # thread B          
-MOV [y] , 1  # (B.1) 
-MFENCE
-MOV EBX, [x] # (B.2) 
+mov [y] , 1
+mfence
+mov EBX, [x]
 \end{minted}
 \end{tabular}
 
 \pause
 Инструкция \texttt{mfence} отменяет переупорядочивание операций с памятью на уровне процессора\footnote<4->{\tiny\url{https://www.felixcloutier.com/x86/mfence.html}}.
-
+-
 \pause
 
 Допустимые результаты: \pause \texttt{(1, 0) (0, 1) (1, 1)}
@@ -235,11 +229,25 @@ MOV EBX, [x] # (B.2)
 Кажется, что компиляторные и процессорные барьеры -- это разные сущности и, наверное, независимые друг от друга. 
 
 \pause
-Однако, кажется логичным, чтобы компилятор уважал процессорные барьеры.
+Должен ли компилятор уважать написанные программистом в исходном коде процессорные барьеры?
 
 \pause
-А наоборот?
+Должен ли процессор уважать написанные программистом в исходном коде компиляторные барьеры?
 \end{frame}
+
+\begin{frame}[t, noframenumbering]{Языковые средства}
+\framesubtitle{Вопросы взаимного влияния}
+
+Краткая выжимка из предыдущих слайдов. Для "починки"\ многопоточных алгоритмов бывает необходимо:
+\begin{itemize}
+  \item запрещать компилятору "фантазировать"
+  \item запрещать процессору "чудить"
+\end{itemize}
+
+Нужен ли программисту независимый контроль над обеими проблемами, с учетом того, что допустить ошибку невероятно легко, а негативные последствия практически невозможно отладить?
+
+\end{frame}
+
 
 \begin{frame}[t]{Языковые средства}
 \framesubtitle{Два мира}
@@ -250,9 +258,6 @@ MOV EBX, [x] # (B.2)
   \item запрещать процессору "чудить"
 \end{itemize}
 
-Нужен ли программисту независимый контроль над обеими проблемами, с учетом того, что допустить ошибку невероятно легко, а негативные последствия практически невозможно отладить?
-
-\pause
 Существуют разные подходы:
 \begin{itemize}
   
@@ -278,8 +283,6 @@ MOV EBX, [x] # (B.2)
   \item запрещать процессору "чудить"
 \end{itemize}
 
-Нужен ли программисту независимый контроль над обеими проблемами, с учетом того, что допустить ошибку невероятно легко, а негативные последствия практически невозможно отладить?
-
 Существуют разные подходы:
 \begin{itemize}
   
@@ -295,8 +298,6 @@ MOV EBX, [x] # (B.2)
 
 \begin{frame}[fragile, t]{Разные миры}
 \framesubtitle{Пример}
-
-
 
 \begin{minted}[fontsize=\small]{c}
 static volatile int x, y;
@@ -327,15 +328,15 @@ C\footnote<2->{\tiny\url{https://godbolt.org/z/q4raxqrTe}}:
 
 \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[fontsize=\small]{gas}
-MOV [x] ,  1  # (A.1)
-MOV EAX , [y] # (A.2)
+mov [x] ,  1
+mov EAX , [y]
 \end{minted}
 
 & 
 
 \begin{minted}[fontsize=\small]{gas}
-MOV [y] , 1  # (B.1) 
-MOV EBX, [x] # (B.2) 
+mov [y] , 1
+mov EBX, [x]
 \end{minted}
 \end{tabular}
 
@@ -375,17 +376,17 @@ Java\footnote{\tiny\url{https://github.com/Svazars/lang-mem-models-intro/tree/ma
 
 \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[fontsize=\small]{gas}
-MOV [x] ,  1         # (A.1)
-lock add [rsp], 0x0  # (A.2)
-MOV EAX , [y]        # (A.3)
+mov [x] ,  1
+lock add [rsp], 0x0
+mov EAX , [y]
 \end{minted}
 
 & 
 
 \begin{minted}[fontsize=\small]{gas}
-MOV [y] , 1         # (B.1) 
-lock add [rsp], 0x0 # (B.2)
-MOV EBX, [x]        # (B.3) 
+mov [y] , 1
+lock add [rsp], 0x0
+mov EBX, [x]
 \end{minted}
 \end{tabular}
 

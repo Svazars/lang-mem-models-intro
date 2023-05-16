@@ -21,16 +21,9 @@
     \pause
     \item Спекулировать\footnote<6->{\tiny\url{https://en.wikipedia.org/wiki/Spectre_(security_vulnerability)}}\textsuperscript{,}\footnote<6->{\tiny\url{https://en.wikipedia.org/wiki/Meltdown_(security_vulnerability)}}
     \begin{itemize}
-        \pause
         \item О предстоящих переходах (branch prediction)
-
-        \pause
         \item О требуемой памяти (cache prefetching)
-
-        \pause
         \item О результате вычислений (speculative execution)
-
-        \pause
         \item И многом другом
     \end{itemize}
 \end{itemize}
@@ -71,16 +64,16 @@ void threadB() {
 \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[fontsize=\small]{gas}
 # thread A
-MOV [x] ,  1  # (A.1)
-MOV EAX , [y] # (A.2)
+mov [x] ,  1  # (A.1)
+mov EAX , [y] # (A.2)
 \end{minted}
 
 & 
 
 \begin{minted}[fontsize=\small]{gas}
 # thread B          
-MOV [y] , 1  # (B.1) 
-MOV EBX, [x] # (B.2) 
+mov [y] , 1  # (B.1) 
+mov EBX, [x] # (B.2) 
 \end{minted}
 \end{tabular}
 
@@ -92,16 +85,16 @@ MOV EBX, [x] # (B.2)
 \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[fontsize=\small]{gas}
 # thread A
-MOV [x] ,  1  # (A.1)
-MOV EAX , [y] # (A.2)
+mov [x] ,  1  # (A.1)
+mov EAX , [y] # (A.2)
 \end{minted}
 
 & 
 
 \begin{minted}[fontsize=\small]{gas}
 # thread B          
-MOV [y] , 1  # (B.1) 
-MOV EBX, [x] # (B.2) 
+mov [y] , 1  # (B.1) 
+mov EBX, [x] # (B.2) 
 \end{minted}
 \end{tabular}
 
@@ -127,16 +120,16 @@ MOV EBX, [x] # (B.2)
 \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[fontsize=\small]{gas}
 # thread A
-MOV [x] ,  1  # (A.1)
-MOV EAX , [y] # (A.2)
+mov [x] ,  1  # (A.1)
+mov EAX , [y] # (A.2)
 \end{minted}
 
 & 
 
 \begin{minted}[fontsize=\small]{gas}
 # thread B          
-MOV [y] , 1  # (B.1) 
-MOV EBX, [x] # (B.2) 
+mov [y] , 1  # (B.1) 
+mov EBX, [x] # (B.2) 
 \end{minted}
 \end{tabular}
 
@@ -160,16 +153,16 @@ MOV EBX, [x] # (B.2)
 \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[fontsize=\small]{gas}
 # thread A
-MOV [x] ,  1  # (A.1)
-MOV EAX , [y] # (A.2)
+mov [x] ,  1  # (A.1)
+mov EAX , [y] # (A.2)
 \end{minted}
 
 & 
 
 \begin{minted}[fontsize=\small]{gas}
 # thread B          
-MOV [y] , 1  # (B.1) 
-MOV EBX, [x] # (B.2) 
+mov [y] , 1  # (B.1) 
+mov EBX, [x] # (B.2) 
 \end{minted}
 \end{tabular}
 
@@ -193,24 +186,24 @@ MOV EBX, [x] # (B.2)
 \begin{tabular}{p{0.5\textwidth} p{0.5\textwidth}}
 \begin{minted}[fontsize=\small]{gas}
 # thread A
-MOV [x] ,  1  # (A.1)
-MOV EAX , [y] # (A.2)
+mov [x] ,  1  # (A.1)
+mov EAX , [y] # (A.2)
 \end{minted}
 
 & 
 
 \begin{minted}[fontsize=\small]{gas}
 # thread B          
-MOV [y] , 1  # (B.1) 
-MOV EBX, [x] # (B.2) 
+mov [y] , 1  # (B.1) 
+mov EBX, [x] # (B.2) 
 \end{minted}
 \end{tabular}
 
 Какие значения для \texttt{(EAX EBX)} допустимы?
 
-\only<1>{\texttt{Ответ:}}\only<2->{\texttt{Правильный ответ:}} \only<1>{\texttt{\ \ \ \ \ \ \ \ \ \ \ }} \texttt{(1 1)\ , (0 1)\ , (1 0)}
+\only<1>{\texttt{Ответ:}}\only<2->{{\color{red}\texttt{Правильный ответ:}}} \only<1>{\texttt{\ \ \ \ \ \ \ \ \ \ \ }} \texttt{(1 1)\ , (0 1)\ , (1 0)}
 \pause
-\texttt{, (0 0)}
+{\color{red} \texttt{, (0 0)}}
 
 \pause
 Процессор может переупорядочить записи и чтения, если это не нарушает intra-thread order.
